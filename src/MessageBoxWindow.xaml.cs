@@ -26,14 +26,12 @@ namespace AppRestorer
 
         void Yes_Click(object sender, RoutedEventArgs e)
         {
-            Result = true;
-            DialogResult = true; // closes window
+            DialogResult = Result = true; // closes window
         }
 
         void No_Click(object sender, RoutedEventArgs e)
         {
-            Result = false;
-            DialogResult = false; // closes window
+            DialogResult = Result = false; // closes window
         }
 
         void Border_MouseDown(object sender, MouseButtonEventArgs e)
