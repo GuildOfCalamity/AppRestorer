@@ -1,0 +1,18 @@
+![Icon](./src/AppIcon.ico)
+
+# AppRestorer - WPF
+
+## v1.0.0.0 - August, 2025
+**Dependencies**
+
+| Assembly | Version |
+| ---- | ---- |
+| .NET | 8.0 |
+
+- A [WPF](https://learn.microsoft.com/en-us/dotnet/desktop/wpf) application that records common user applications and can restore/launch them on startup.
+- Applications that are detected in common Windows startup locations will be ignored.
+
+![Screenshot](./Screenshot.png)
+
+![CustomDialog](./Screenshot2.png)
+

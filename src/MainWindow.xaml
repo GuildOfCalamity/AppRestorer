@@ -1,0 +1,81 @@
+﻿<Window
+    x:Class="AppRestorer.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AppRestorer"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="App Restorer"
+    Width="900"
+    Height="360"
+    Background="#141414"
+    Icon="/AppRestorer;component/AppIcon.ico"
+    Loaded="Window_Loaded"
+    ShowInTaskbar="True"
+    WindowStartupLocation="CenterScreen"
+    WindowState="Normal"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <DockPanel Background="{StaticResource ExtraDarkBrush}" MouseDown="DockPanel_MouseDown">
+        <TextBlock
+            x:Name="tbStatus"
+            Margin="15,10,5,0"
+            DockPanel.Dock="Top"
+            FontSize="16"
+            Foreground="{StaticResource NormalBrush}"
+            Text="Select apps to restore…" />
+        <Border
+            x:Name="Border"
+            Margin="10"
+            Padding="0"
+            Background="Transparent"
+            BorderBrush="{StaticResource NormalDarkBrush}"
+            BorderThickness="0"
+            CornerRadius="3">
+            <ListBox
+                x:Name="AppList"
+                MinWidth="680"
+                Margin="0"
+                Background="Transparent"
+                BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            x:Name="Border"
+                            Margin="1"
+                            Padding="8"
+                            BorderBrush="#88909090"
+                            BorderThickness="1"
+                            CornerRadius="3">
+                            <CheckBox
+                                Margin="0"
+                                Content="{Binding}"
+                                Foreground="WhiteSmoke"
+                                IsChecked="True" />
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+        <StackPanel
+            Margin="10"
+            HorizontalAlignment="Right"
+            DockPanel.Dock="Bottom"
+            Orientation="Vertical">
+            <Button
+                Width="150"
+                Height="50"
+                Margin="5"
+                Click="RestoreSelected_Click"
+                Content="Restore Selected"
+                Template="{StaticResource ReformedButton}" />
+            <Button
+                Width="150"
+                Height="50"
+                Margin="5"
+                Click="Close_Click"
+                Content="Close"
+                Template="{StaticResource ReformedButton}" />
+        </StackPanel>
+    </DockPanel>
+</Window>
