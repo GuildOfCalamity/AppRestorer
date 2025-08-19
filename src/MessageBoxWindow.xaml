@@ -8,7 +8,9 @@
     Title="Message"
     AllowsTransparency="True"
     Background="Transparent"
+    Closing="Window_Closing"
     FontFamily="Aptos"
+    Loaded="Window_Loaded"
     ResizeMode="NoResize"
     ShowInTaskbar="False"
     SizeToContent="WidthAndHeight"
@@ -16,7 +18,7 @@
     WindowStyle="None"
     mc:Ignorable="d">
     <Border
-        MinWidth="390"
+        MinWidth="410"
         MinHeight="160"
         Margin="10"
         Padding="20"
@@ -35,14 +37,54 @@
         </Border.Effect>
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!--  Message  -->
+            <!--#region [TitleBar]-->
+            <StackPanel
+                Grid.Row="0"
+                Margin="0,-16,0,0"
+                Orientation="Vertical">
+                <Grid HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        x:Name="TitleText"
+                        Grid.Column="0"
+                        Margin="-10,0,0,0"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        FontSize="18"
+                        Foreground="{StaticResource TitleBrush}"
+                        Text="Notice"
+                        TextAlignment="Left"
+                        TextWrapping="NoWrap" />
+                    <Image
+                        Grid.Column="1"
+                        Width="32"
+                        Margin="0,0,-9,3"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Opacity="0.9"
+                        RenderOptions.BitmapScalingMode="Fant"
+                        Source="{StaticResource imgWarning}" />
+                </Grid>
+                <Border
+                    Margin="-18,2,-18,0"
+                    BorderBrush="{StaticResource TitleBrush}"
+                    BorderThickness="0,0,0,2"
+                    CornerRadius="4" />
+            </StackPanel>
+            <!--#endregion-->
+
+            <!--#region [Message]-->
             <TextBlock
                 x:Name="MessageText"
-                Grid.Row="0"
+                Grid.Row="1"
                 Margin="20"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
@@ -51,37 +93,37 @@
                 Text="Message Goes Here"
                 TextAlignment="Center"
                 TextWrapping="Wrap" />
+            <!--#endregion-->
 
-            <!--  Buttons  -->
+            <!--#region [Buttons]-->
             <StackPanel
-                Grid.Row="1"
+                Grid.Row="2"
                 Margin="10,5,10,2"
                 HorizontalAlignment="Center"
                 Orientation="Horizontal">
                 <Button
+                    x:Name="ButtonYes"
                     Width="100"
-                    Margin="5,0"
+                    Height="36"
+                    Margin="5,0,5,0"
                     Click="Yes_Click"
                     Content="Yes"
                     FontSize="16"
                     IsDefault="True"
                     Template="{StaticResource ReformedButton}" />
-                <Image
-                    Width="44"
-                    Height="44"
-                    Margin="8,0,8,0"
-                    Opacity="1"
-                    RenderOptions.BitmapScalingMode="Fant"
-                    Source="/WarningIcon3.png" />
                 <Button
+                    x:Name="ButtonNo"
                     Width="100"
-                    Margin="5,0"
+                    Height="36"
+                    Margin="5,0,5,0"
                     Click="No_Click"
                     Content="No"
                     FontSize="16"
                     IsCancel="True"
                     Template="{StaticResource ReformedButton}" />
             </StackPanel>
+            <!--#endregion-->
+
         </Grid>
     </Border>
 </Window>

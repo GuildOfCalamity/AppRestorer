@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Shapes;
@@ -18,7 +19,9 @@ namespace AppRestorer
 {
     public partial class App : Application
     {
+        bool _deepDive = false;
         public string saveFileName = "apps.json";
+        public List<StartupEntry> startupEntries = new List<StartupEntry>();
 
         #region [Overrides]
         protected override void OnStartup(StartupEventArgs e)
@@ -29,13 +32,23 @@ namespace AppRestorer
 
             base.OnStartup(e);
 
-            // Run minimized, no window shown at startup
+            if (_deepDive)
+            {
+                ThreadPool.QueueUserWorkItem(o =>
+                {
+                    startupEntries = StartupAnalyzer.GetAllStartupEntries();
+                    foreach (var se in startupEntries.OrderBy(x => x.Source).ThenBy(x => x.Scope).ThenBy(x => x.Name))
+                    {
+                        Debug.WriteLine($"[{se.Source}] ({se.Scope}) {se.Name}");
+                        Debug.WriteLine($"  Enabled: {se.Enabled?.ToString() ?? "Unknown"}");
+                        Debug.WriteLine($"  Command: {se.Command}");
+                        Debug.WriteLine($"  Location: {se.Location}");
+                        Debug.WriteLine("");
+                    }
+                });
+            }
+
             //Current.MainWindow = new MainWindow { Visibility = Visibility.Hidden };
-
-            // Save immediately on startup as well
-            //SaveRunningApps();
-
-            //StartupAnalyzer.Test();
         }
 
 
@@ -59,25 +72,37 @@ namespace AppRestorer
             {
                 try
                 {
-                    if (proc.MainWindowHandle != IntPtr.Zero &&
+                    // Don't include OS modules/services or firewall/vpn clients, as they typically
+                    // start on their own or as needed. These strings can be moved to a config.
+
+                    if (proc.MainWindowHandle != IntPtr.Zero && // if no window handle then possibly a service 
                         !string.IsNullOrEmpty(proc.MainModule?.FileName) &&
+                        !proc.MainModule.FileName.ToLower().Contains("\\cisco") &&       // VPN client
                         !proc.MainModule.FileName.ToLower().Contains("\\sonicwall") &&   // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\fortigate") &&   // VPN client
                         !proc.MainModule.FileName.ToLower().Contains("\\windowsapps") && // Outlook, Teams, etc
                         !proc.MainModule.FileName.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase))
                     {
-                        // De-dupe entries and check for registry startup apps
+                        // Self, duplicate, and registry startup checks
                         if (!runningApps.Contains(proc.MainModule.FileName) && 
                             !proc.MainModule.FileName.EndsWith(GetSelfName(), StringComparison.OrdinalIgnoreCase) &&
                             !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
                         {
-                            runningApps.Add(proc.MainModule.FileName);
+                            if (_deepDive)
+                            {
+                                if (startupEntries.Any(ent => !string.IsNullOrEmpty(ent.Command) && !ent.Command.Contains("non-exec or no action") && !ent.Command.Contains(proc.MainModule.FileName)))
+                                    runningApps.Add(proc.MainModule.FileName);
+                                else
+                                    Debug.WriteLine($"[WARNING] {proc.MainModule.FileName} was found as part of the StartupEntries catalog, skipping module.");
+                            }
+                            else
+                            {
+                                runningApps.Add(proc.MainModule.FileName);
+                            }
                         }
                     }
                 }
-                catch (Exception)
-                {
-                    // Ignore processes we can't access
-                }
+                catch (Exception) { /* Ignore processes we can't access */ }
             }
 
             try
@@ -107,16 +132,26 @@ namespace AppRestorer
             {
                 File.Copy(saveFileName, $"{saveFileName}.{DateTime.Now:yyyyMMdd}.bak", true);
             }
-            catch { /* ignore exceptions */ }
+            catch { /* Ignore */ }
         }
 
         public static bool ShowMessage(string message, Window? owner = null)
         {
             var msgBox = new MessageBoxWindow(message);
-            if (owner != null) { msgBox.Owner = owner; }
+            if (owner != null) 
+            { 
+                msgBox.Owner = owner;
+                msgBox.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            else 
+            { 
+                msgBox.WindowStartupLocation = WindowStartupLocation.CenterScreen; 
+            }
             bool? result = msgBox.ShowDialog();
             return result == true;
         }
+        
+        public string GetSelfName() => $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.exe";
         #endregion
 
         #region [Registry]
@@ -139,7 +174,7 @@ namespace AppRestorer
                     CollectFromKey(cuKey, keys[0], results);
                 }
             }
-            catch (UnauthorizedAccessException) { /* Ignore access denied */ }
+            catch (UnauthorizedAccessException) { /* Ignore */ }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[ERROR] Failed to read CurrentUser registry: {ex.Message}");
@@ -154,7 +189,7 @@ namespace AppRestorer
                     CollectFromKey(lmKey, keys[2], results);
                 }
             }
-            catch (UnauthorizedAccessException) { /* Ignore access denied */ }
+            catch (UnauthorizedAccessException) { /* Ignore */ }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[ERROR] Failed to read LocalMachine registry: {ex.Message}");
@@ -178,7 +213,7 @@ namespace AppRestorer
                     }
                 }
             }
-            catch (UnauthorizedAccessException) { /* Ignore access denied */ }
+            catch (UnauthorizedAccessException) { /* Ignore */ }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[ERROR] Failed to read registry key '{subKey}': {ex.Message}");
@@ -190,7 +225,8 @@ namespace AppRestorer
         void CurrentDomain_FirstChanceException(object? sender, FirstChanceExceptionEventArgs e)
         {
             if (!string.IsNullOrEmpty(e.Exception.Message) &&
-                !e.Exception.Message.StartsWith("A task was canceled", StringComparison.OrdinalIgnoreCase))
+                !e.Exception.Message.StartsWith("A task was canceled", StringComparison.OrdinalIgnoreCase) &&
+                !e.Exception.Message.Contains($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.XmlSerializers"))
             {
                 Debug.WriteLine($"[WARNING] First chance exception: {e.Exception.Message}");
             }
@@ -210,10 +246,8 @@ namespace AppRestorer
         void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             Debug.WriteLine($"[ERROR] Unhandled exception: {e.Exception.Message}");
-            e.Handled = true; // Prevent application crash
+            e.Handled = true; // Prevent crash
         }
         #endregion
-
-        public string GetSelfName() => $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.exe";
     }
 }

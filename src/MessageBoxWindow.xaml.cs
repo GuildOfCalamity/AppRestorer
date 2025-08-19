@@ -1,27 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace AppRestorer
 {
     public partial class MessageBoxWindow : Window
     {
+        DispatcherTimer? _timer;
+
         public bool Result { get; private set; }
 
-        public MessageBoxWindow(string message)
+        public MessageBoxWindow(string message, string title = "Notice", string yes = "Yes", string no = "No")
         {
             InitializeComponent();
             MessageText.Text = message;
+            TitleText.Text = title;
+            ButtonYes.Content = yes;
+            ButtonNo.Content = no;
+
+        }
+
+        void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // If window gets buried, then re-activate it for the user.
+            _timer = new DispatcherTimer();
+            _timer.Interval = TimeSpan.FromSeconds(30d);
+            _timer.Tick += (s, ev) =>
+            {
+                this.Activate();
+                this.Focus();
+            };
+            _timer.Start();
+        }
+
+        void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _timer?.Stop();
+            _timer = null;
         }
 
         void Yes_Click(object sender, RoutedEventArgs e)
@@ -43,5 +60,6 @@ namespace AppRestorer
             }
             Cursor = Cursors.Arrow;
         }
+
     }
 }

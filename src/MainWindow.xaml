@@ -10,6 +10,7 @@
     Height="450"
     AllowsTransparency="True"
     Background="Transparent"
+    Closing="Window_Closing"
     FontFamily="Aptos"
     Icon="/AppRestorer;component/AppIcon.ico"
     Loaded="Window_Loaded"
@@ -45,7 +46,7 @@
                 Margin="15,10,5,0"
                 DockPanel.Dock="Top"
                 FontSize="16"
-                Foreground="{StaticResource NormalBrush}"
+                Foreground="{StaticResource TitleBrush}"
                 Text="Select apps to restore…" />
             <Border
                 x:Name="Border"
@@ -99,7 +100,7 @@
                 Orientation="Horizontal">
                 <Button
                     Width="150"
-                    Height="50"
+                    Height="44"
                     Margin="4,2"
                     Click="Restore_Click"
                     Content="Restore Selected"
@@ -107,15 +108,7 @@
                     Template="{StaticResource ReformedButton}" />
                 <Button
                     Width="150"
-                    Height="50"
-                    Margin="4,2"
-                    Click="Minimize_Click"
-                    Content="Hide"
-                    FontSize="15"
-                    Template="{StaticResource ReformedButton}" />
-                <Button
-                    Width="150"
-                    Height="50"
+                    Height="44"
                     Margin="4,2"
                     Click="Invert_Click"
                     Content="Invert Selections"
@@ -123,7 +116,15 @@
                     Template="{StaticResource ReformedButton}" />
                 <Button
                     Width="150"
-                    Height="50"
+                    Height="44"
+                    Margin="4,2"
+                    Click="Minimize_Click"
+                    Content="Minimize"
+                    FontSize="15"
+                    Template="{StaticResource ReformedButton}" />
+                <Button
+                    Width="150"
+                    Height="44"
                     Margin="4,2"
                     Click="Close_Click"
                     Content="Close"

@@ -113,6 +113,15 @@
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>
+            <LinearGradientBrush x:Key="TitleBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#888" />
+                        <GradientStop Offset="1.0" Color="#DDD" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+
             <LinearGradientBrush x:Key="SlideValueBrush" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
@@ -136,6 +145,7 @@
 
             <!--  Assets  -->
             <BitmapImage x:Key="imgBackground" UriSource="AppIcon.png" />
+            <BitmapImage x:Key="imgWarning" UriSource="Assets/WarningIcon2.png" />
 
             <!--  Background styles  -->
             <Style x:Key="borderBackground" TargetType="{x:Type Border}">

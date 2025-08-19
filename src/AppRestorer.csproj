@@ -23,19 +23,23 @@
     <None Remove="AppIcon.png" />
     <None Remove="WarningIcon2.png" />
     <None Remove="WarningIcon3.png" />
+    <None Remove="WarningIcon4.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="AppIcon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="WarningIcon1.png">
+    <Content Include="Assets\WarningIcon1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="WarningIcon2.png">
+    <Content Include="Assets\WarningIcon2.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="WarningIcon3.png">
+    <Content Include="Assets\WarningIcon3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\WarningIcon4.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
