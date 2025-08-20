@@ -8,6 +8,7 @@
     Title="App Restorer"
     Width="950"
     Height="450"
+    Activated="Window_Activated"
     AllowsTransparency="True"
     Background="Transparent"
     Closing="Window_Closing"
@@ -66,7 +67,7 @@
                     BorderThickness="0"
                     Style="{StaticResource listBoxBackground}">
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="{x:Type local:RestoreItem}">
                             <Border
                                 x:Name="Border"
                                 Margin="1"
@@ -82,12 +83,25 @@
                                         ShadowDepth="3"
                                         Color="{StaticResource BackgroundDark}" />
                                 </Border.Effect>
-                                <CheckBox
-                                    Margin="0"
-                                    Content="{Binding}"
-                                    FontSize="14"
-                                    Foreground="{StaticResource NormalBrush}"
-                                    IsChecked="True" />
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox
+                                        Margin="0"
+                                        VerticalAlignment="Center"
+                                        VerticalContentAlignment="Center"
+                                        Content="{Binding Location}"
+                                        FontSize="14"
+                                        Foreground="{StaticResource NormalBrush}"
+                                        IsChecked="True"
+                                        ToolTipService.ToolTip="Application Path" />
+                                    <Image
+                                        Width="24"
+                                        Margin="15,0,0,0"
+                                        Cursor="Hand"
+                                        MouseDown="Favorite_MouseDown"
+                                        RenderOptions.BitmapScalingMode="Fant"
+                                        Source="{Binding Favorite, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource boolToImage}}"
+                                        ToolTipService.ToolTip="Toggle Favorite" />
+                                </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -120,6 +134,15 @@
                     Margin="4,2"
                     Click="Minimize_Click"
                     Content="Minimize"
+                    FontSize="15"
+                    Template="{StaticResource ReformedButton}" />
+                <Button
+                    x:Name="ButtonBackup"
+                    Width="150"
+                    Height="44"
+                    Margin="4,2"
+                    Click="LoadBackup_Click"
+                    Content="Load Backup"
                     FontSize="15"
                     Template="{StaticResource ReformedButton}" />
                 <Button

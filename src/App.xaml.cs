@@ -22,6 +22,8 @@ namespace AppRestorer
         bool _deepDive = false;
         public string saveFileName = "apps.json";
         public List<StartupEntry> startupEntries = new List<StartupEntry>();
+        public static Uri FavEnabled = new Uri(@"Assets\FavoriteIcon3.png", UriKind.Relative);
+        public static Uri FavDisabled = new Uri(@"Assets\FavoriteIcon4.png", UriKind.Relative);
 
         #region [Overrides]
         protected override void OnStartup(StartupEventArgs e)
@@ -54,15 +56,17 @@ namespace AppRestorer
 
         protected override void OnExit(ExitEventArgs e)
         {
-            SaveRunningApps();
+            // Moved to MainWindow's closing event.
+            //SaveRunningApps();
             base.OnExit(e);
         }
         #endregion
 
         #region [Public Methods]
-        public void SaveRunningApps()
+        public List<RestoreItem> CollectRunningApps()
         {
-            var runningApps = new List<string>();
+            //var runningApps = new List<string>();
+            var runningApps = new List<RestoreItem>();
 
             // Ignore any apps that already start on login
             var registryApps = GetStartupApps();
@@ -84,20 +88,72 @@ namespace AppRestorer
                         !proc.MainModule.FileName.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase))
                     {
                         // Self, duplicate, and registry startup checks
-                        if (!runningApps.Contains(proc.MainModule.FileName) && 
+                        if (!runningApps.Any(ri => ri.Location.Contains(proc.MainModule.FileName)) &&
                             !proc.MainModule.FileName.EndsWith(GetSelfName(), StringComparison.OrdinalIgnoreCase) &&
                             !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
                         {
                             if (_deepDive)
                             {
                                 if (startupEntries.Any(ent => !string.IsNullOrEmpty(ent.Command) && !ent.Command.Contains("non-exec or no action") && !ent.Command.Contains(proc.MainModule.FileName)))
-                                    runningApps.Add(proc.MainModule.FileName);
+                                    runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
                                 else
                                     Debug.WriteLine($"[WARNING] {proc.MainModule.FileName} was found as part of the StartupEntries catalog, skipping module.");
                             }
                             else
                             {
-                                runningApps.Add(proc.MainModule.FileName);
+                                //runningApps.Add(proc.MainModule.FileName);
+                                runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                            }
+                        }
+                    }
+                }
+                catch (Exception) { /* Ignore processes we can't access */ }
+            }
+            
+            return runningApps;
+        }
+
+
+        public void SaveRunningApps()
+        {
+            //var runningApps = new List<string>();
+            var runningApps = new List<RestoreItem>();
+
+            // Ignore any apps that already start on login
+            var registryApps = GetStartupApps();
+
+            // Traverse all running processes
+            foreach (var proc in Process.GetProcesses())
+            {
+                try
+                {
+                    // Don't include OS modules/services or firewall/vpn clients, as they typically
+                    // start on their own or as needed. These strings can be moved to a config.
+
+                    if (proc.MainWindowHandle != IntPtr.Zero && // if no window handle then possibly a service 
+                        !string.IsNullOrEmpty(proc.MainModule?.FileName) &&
+                        !proc.MainModule.FileName.ToLower().Contains("\\cisco") &&       // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\sonicwall") &&   // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\fortigate") &&   // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\windowsapps") && // Outlook, Teams, etc
+                        !proc.MainModule.FileName.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Self, duplicate, and registry startup checks
+                        if (!runningApps.Any(ri => ri.Location.Contains(proc.MainModule.FileName)) && 
+                            !proc.MainModule.FileName.EndsWith(GetSelfName(), StringComparison.OrdinalIgnoreCase) &&
+                            !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
+                        {
+                            if (_deepDive)
+                            {
+                                if (startupEntries.Any(ent => !string.IsNullOrEmpty(ent.Command) && !ent.Command.Contains("non-exec or no action") && !ent.Command.Contains(proc.MainModule.FileName)))
+                                    runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                                else
+                                    Debug.WriteLine($"[WARNING] {proc.MainModule.FileName} was found as part of the StartupEntries catalog, skipping module.");
+                            }
+                            else
+                            {
+                                //runningApps.Add(proc.MainModule.FileName);
+                                runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
                             }
                         }
                     }
@@ -112,15 +168,27 @@ namespace AppRestorer
             catch (Exception) { /* Ignore */ }
         }
 
-        public List<string> LoadSavedApps()
+        public void SaveExistingApps(List<RestoreItem> appList)
         {
-            if (!File.Exists(saveFileName))
-                return new List<string>();
             try
             {
-                return JsonSerializer.Deserialize<List<string>>(File.ReadAllText(saveFileName)) ?? new List<string>();
+                File.WriteAllText(saveFileName, JsonSerializer.Serialize(appList, new JsonSerializerOptions { WriteIndented = true }));
             }
-            catch { return new List<string>(); }
+            catch (Exception) { /* Ignore */ }
+        }
+
+        public List<RestoreItem> LoadSavedApps(string filePath = "")
+        {
+            if (string.IsNullOrEmpty(filePath))
+                filePath = saveFileName;
+
+            if (!File.Exists(saveFileName))
+                return new List<RestoreItem>();
+            try
+            {
+                return JsonSerializer.Deserialize<List<RestoreItem>>(File.ReadAllText(saveFileName)) ?? new List<RestoreItem>();
+            }
+            catch { return new List<RestoreItem>(); }
         }
 
         public void BackupAppFile()
@@ -228,7 +296,9 @@ namespace AppRestorer
                 !e.Exception.Message.StartsWith("A task was canceled", StringComparison.OrdinalIgnoreCase) &&
                 !e.Exception.Message.Contains($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.XmlSerializers"))
             {
-                Debug.WriteLine($"[WARNING] First chance exception: {e.Exception.Message}");
+                var str = $"[WARNING] First chance exception: {e.Exception.Message}";
+                Debug.WriteLine(str);
+                str.WriteToLog();
             }
         }
 
@@ -236,8 +306,10 @@ namespace AppRestorer
         {
             try
             {
-                Debug.WriteLine($"[WARNING] Unhandled exception: {((Exception)e.ExceptionObject).Message}");
-                MessageBox.Show(((Exception)e.ExceptionObject).Message, "AppRestore UnhandledException");
+                var str = $"[ERROR] Unhandled exception: {((Exception)e.ExceptionObject).Message}";
+                Debug.WriteLine(str);
+                str.WriteToLog();
+                //MessageBox.Show(((Exception)e.ExceptionObject).Message, "AppRestore UnhandledException");
                 //System.Diagnostics.EventLog.WriteEntry(SystemTitle, $"Unhandled exception thrown:\r\n{((Exception)e.ExceptionObject).ToString()}");
             }
             catch (Exception) { }
@@ -245,9 +317,20 @@ namespace AppRestorer
 
         void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            Debug.WriteLine($"[ERROR] Unhandled exception: {e.Exception.Message}");
+            var str = $"[ERROR] Unhandled exception: {e.Exception.Message}";
+            Debug.WriteLine(str);
             e.Handled = true; // Prevent crash
+            str.WriteToLog();
         }
         #endregion
+    }
+
+    /// <summary>
+    /// Basic data model
+    /// </summary>
+    public class RestoreItem
+    {
+        public string? Location { get; set; }
+        public bool Favorite { get; set; }
     }
 }

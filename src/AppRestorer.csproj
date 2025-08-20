@@ -21,6 +21,15 @@
   <ItemGroup>
     <None Remove="AppIcon.ico" />
     <None Remove="AppIcon.png" />
+    <None Remove="Assets\Apps.png" />
+    <None Remove="Assets\FavoriteIcon1.png" />
+    <None Remove="Assets\FavoriteIcon2.png" />
+    <None Remove="Assets\FavoriteIcon3.png" />
+    <None Remove="Assets\FavoriteIcon4.png" />
+    <None Remove="Assets\FavoriteIcon5.png" />
+    <None Remove="Assets\FavoriteIcon6.png" />
+    <None Remove="Assets\FavoriteIcon7.png" />
+    <None Remove="Assets\FavoriteIcon8.png" />
     <None Remove="WarningIcon2.png" />
     <None Remove="WarningIcon3.png" />
     <None Remove="WarningIcon4.png" />
@@ -28,6 +37,33 @@
 
   <ItemGroup>
     <Content Include="AppIcon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Apps.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon4.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon5.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon6.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon7.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon8.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\WarningIcon1.png">

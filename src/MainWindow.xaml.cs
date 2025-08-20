@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace AppRestorer
@@ -19,7 +21,7 @@ namespace AppRestorer
     {
         #region [Local members]
         App? _app;
-        List<string>? _appList;
+        List<RestoreItem>? _appList;
         DispatcherTimer? _timer;
         bool _firstRun;
         double _interval;
@@ -29,6 +31,25 @@ namespace AppRestorer
         public MainWindow()
         {
             InitializeComponent();
+
+            #region [Testing preserve favorites even if closed]
+            var list1 = new List<RestoreItem>();
+            list1.Add(new RestoreItem { Location = @"D:\cache\thing1.exe", Favorite = false });
+            list1.Add(new RestoreItem { Location = @"D:\cache\thing2.exe", Favorite = true });
+            var list2 = new List<RestoreItem>();
+            list2.Add(new RestoreItem { Location = @"D:\cache\thing1.exe", Favorite = false });
+            var finalists = PreserveFavoritesWithMerge(list1, list2);
+
+            list2 = list1.Join(list1, 
+                t => t.Location, 
+                s => s.Location,
+                (t, s) => 
+                { 
+                    t.Favorite = s.Favorite; 
+                    return t; 
+                })
+                .ToList();
+            #endregion
 
             #region [Persistent settings]
             ConfigManager.OnError += (sender, ex) => 
@@ -51,15 +72,56 @@ namespace AppRestorer
             _timer.Tick += (s, ev) =>
             {
                 _app?.BackupAppFile();
-                _app?.SaveRunningApps();
+                if (_appList?.Count > 0)
+                {
+                    var finalists = PreserveFavoritesWithMerge(_appList, _app?.CollectRunningApps());
+                    _app?.SaveExistingApps(finalists);
+                }
+                else
+                    _app?.SaveRunningApps();
+
                 // Good practice in the event that timer is changed to different type other than DispatcherTimer.
-                tbStatus.Dispatcher.Invoke(delegate() 
+                tbStatus.Dispatcher.Invoke(delegate ()
                 {
                     tbStatus.Text = $"Next check will occur {_timer.Interval.DescribeFutureTime()}";
                 });
             };
             _timer.Start();
             #endregion
+        }
+
+        /// <summary>
+        /// In the event that a favorite is closed, we should remember it in the data.
+        /// </summary>
+        public List<RestoreItem> PreserveFavoritesWithMerge(List<RestoreItem> sourceList, List<RestoreItem>? targetList)
+        {
+            if (targetList == null || targetList.Count == 0)
+                targetList = _app?.CollectRunningApps();
+
+            var lookup = sourceList
+                .Where(s => s.Location != null)
+                .ToDictionary(s => s.Location!, s => s.Favorite, StringComparer.OrdinalIgnoreCase);
+
+            // Start with updated targetList
+            var result = targetList
+                .Select(t =>
+                {
+                    if (t.Location != null && lookup.TryGetValue(t.Location, out var fav))
+                        t.Favorite = fav;
+                    return t;
+                })
+                .ToList();
+
+            // Add any missing Favorites from sourceList
+            var existingLocations = new HashSet<string?>(result.Select(r => r.Location), StringComparer.OrdinalIgnoreCase);
+
+            var missingFavorites = sourceList
+                .Where(s => s.Favorite && !existingLocations.Contains(s.Location))
+                .ToList();
+
+            result.AddRange(missingFavorites);
+
+            return result;
         }
 
         #region [Events]
@@ -93,20 +155,21 @@ namespace AppRestorer
                 var container = AppList.ItemContainerGenerator.ContainerFromItem(item) as ListBoxItem;
                 if (container != null)
                 {
+                    var ri = item as RestoreItem;
                     var checkBox = FindVisualChild<CheckBox>(container);
-                    if (checkBox != null && checkBox.IsChecked == true)
+                    if (checkBox != null && checkBox.IsChecked == true && ri != null)
                     {
-                        if (IsAppRunning($"{item}"))
+                        if (IsAppRunning($"{ri.Location}"))
                         {
-                            tbStatus.Text = $"Already running '{item}'";
+                            tbStatus.Text = $"Already running '{ri.Location}'";
                             continue;
                         }
                         // Attempt to start the application
-                        tbStatus.Text = $"Restoring application '{item}'";
+                        tbStatus.Text = $"Restoring application '{ri.Location}'";
                         extend++;
                         _ = TimedTask.Schedule(() =>
                         {
-                            try { Process.Start($"{item}"); }
+                            try { Process.Start($"{ri.Location}"); }
                             catch { /* ignore if fails */ }
                         },
                         DateTime.Now.AddSeconds(extend));
@@ -123,6 +186,7 @@ namespace AppRestorer
                 if (item is null)
                     continue;
 
+                // Get the ListBoxItem and then its associated CheckBox.
                 var container = AppList.ItemContainerGenerator.ContainerFromItem(item) as ListBoxItem;
                 if (container != null)
                 {
@@ -137,14 +201,22 @@ namespace AppRestorer
 
         void Close_Click(object sender, RoutedEventArgs e) => this.Close();
 
+        void Window_Activated(object sender, EventArgs e)
+        {
+            // Check for backups
+            if (!System.IO.File.Exists($"{_app?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak"))
+                ButtonBackup.IsEnabled = false;
+            else
+                ButtonBackup.IsEnabled = true;
+        }
+
         void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            InitAndLoadApps();
             if (_appList?.Count == 0)
-            {
                 _app?.SaveRunningApps();
-                InitAndLoadApps();
-            }
+
+            InitAndLoadApps();
+
             tbStatus.Text = $"Select any of the {_appList?.Count} apps to restore…";
 
             // Check for previous apps
@@ -152,7 +224,7 @@ namespace AppRestorer
             {
                 try
                 {
-                    var apps = JsonSerializer.Deserialize<List<string>>(System.IO.File.ReadAllText(_app.saveFileName));
+                    var apps = JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(_app.saveFileName));
                     if (apps != null && apps.Any())
                     {
                         bool answer = App.ShowMessage($"Do you wish to restore {_appList?.Count} {(_appList?.Count == 1 ? "app?" : "apps?")}", this);
@@ -162,7 +234,7 @@ namespace AppRestorer
                             foreach (var app in apps)
                             {
                                 extend++;
-                                string fullPath = app;
+                                string fullPath = app.Location ?? string.Empty;
                                 _ = TimedTask.Schedule(() =>
                                 {
                                     try { Process.Start(fullPath); }
@@ -183,8 +255,12 @@ namespace AppRestorer
         void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             ConfigManager.Set("FirstRun", value: false);
-            ConfigManager.Set("PollIntervalInMinutes", _interval);
+            ConfigManager.Set("PollIntervalInMinutes", value: _interval);
             ConfigManager.Set("LastUse", value: DateTime.Now);
+            if (_appList?.Count > 0)
+                _app?.SaveExistingApps(_appList);
+            else
+                _app?.SaveRunningApps();
         }
 
         void MainControl_MouseDown(object sender, MouseButtonEventArgs e)
@@ -202,13 +278,55 @@ namespace AppRestorer
             if (this.WindowState == WindowState.Normal)
                 this.WindowState = WindowState.Minimized;
         }
+
+        void LoadBackup_Click(object sender, RoutedEventArgs e)
+        {
+            var prevFile = $"{_app?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
+            _appList = _app?.LoadSavedApps(prevFile).OrderBy(o => o).ToList();
+            AppList.ItemsSource = null;
+            AppList.ItemsSource = _appList;
+        }
+
+        void Favorite_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DependencyObject dep)
+            {
+                var lbi = FindAncestor<ListBoxItem>(dep);
+                if (lbi != null)
+                {
+                    // Now you have the ListBoxItem
+                    // You can change the image, access lbi.DataContext, etc.
+                    var data = lbi.DataContext as RestoreItem;
+                    if (data != null)
+                    {
+                        var img = sender as Image;
+                        if (img != null)
+                        {
+                            if (data.Favorite)
+                            {
+                                data.Favorite = false;
+                                img.Source = new BitmapImage(App.FavDisabled);
+                            }
+                            else
+                            {
+                                data.Favorite = true;
+                                img.Source = new BitmapImage(App.FavEnabled);
+                            }
+                            //Debug.WriteLine($"{new string('=', 60)}");
+                            //foreach (var item in _appList) { Debug.WriteLine($"[INFO] Favorite: {item.Favorite}"); }
+                        }
+                    }
+                }
+            }
+        }
         #endregion
 
         #region [Helpers]
         void InitAndLoadApps()
         {
             _app = (App)Application.Current;
-            _appList = _app.LoadSavedApps().OrderBy(o => o).ToList();
+            _appList = _app.LoadSavedApps().OrderBy(o => o.Location).ToList();
+            AppList.ItemsSource = null;
             AppList.ItemsSource = _appList;
         }
 
@@ -224,6 +342,7 @@ namespace AppRestorer
                 if (item is null)
                     continue;
 
+                // Get the ListBoxItem and then its associated CheckBox.
                 var container = AppList.ItemContainerGenerator.ContainerFromItem(item) as ListBoxItem;
                 if (container != null)
                 {
@@ -249,7 +368,7 @@ namespace AppRestorer
         }
 
         /// <summary>
-        /// Extracts a child of a specific type from a parent
+        /// Extracts a child of a specific type from a parent <see cref="DependencyObject"/>.
         /// </summary>
         static T? FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
         {
@@ -261,6 +380,21 @@ namespace AppRestorer
                 var childOfChild = FindVisualChild<T>(child);
                 if (childOfChild != null)
                     return childOfChild;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Extracts a parent of a specific type from the child <see cref="DependencyObject"/>.
+        /// </summary>
+        static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T target)
+                    return target;
+
+                current = VisualTreeHelper.GetParent(current);
             }
             return null;
         }
