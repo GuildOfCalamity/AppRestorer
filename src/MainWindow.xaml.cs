@@ -212,10 +212,15 @@ namespace AppRestorer
 
         void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (_appList?.Count == 0)
-                _app?.SaveRunningApps();
+            if (_appList == null)
+                InitAndLoadApps();
 
-            InitAndLoadApps();
+            if (_appList?.Count == 0)
+            {
+                _app?.SaveRunningApps();
+                InitAndLoadApps();
+            }
+
 
             tbStatus.Text = $"Select any of the {_appList?.Count} apps to restore…";
 

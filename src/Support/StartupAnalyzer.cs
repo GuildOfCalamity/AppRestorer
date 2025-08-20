@@ -408,6 +408,49 @@ namespace AppRestorer
         }
 
         /// <summary>
+        /// Reads the Startup folder and returns each file's name and contents.
+        /// </summary>
+        /// <returns>Dictionary with file name as key and contents as value.</returns>
+        public static Dictionary<string, string> GetShellStartupFilesAndContents()
+        {
+            var results = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                // Get current user's Startup folder
+                string startupPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup)
+                );
+
+                if (!Directory.Exists(startupPath))
+                    return results;
+
+                foreach (var file in Directory.GetFiles(startupPath))
+                {
+                    string fileName = Path.GetFileName(file);
+                    string content = string.Empty;
+
+                    try
+                    {   // Try to read as text
+                        content = File.ReadAllText(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        // If not a text file, note it
+                        content = $"[Unable to read: {ex.Message}]";
+                    }
+
+                    results[fileName] = content;
+                }
+            }
+            catch (Exception ex)
+            {
+                results["[Error]"] = $"Failed to analyze Startup folder: {ex.Message}";
+            }
+
+            return results;
+        }
+
+        /// <summary>
         /// Example usage
         /// </summary>
         public static void RunTest()

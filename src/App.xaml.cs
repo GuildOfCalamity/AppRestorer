@@ -113,7 +113,6 @@ namespace AppRestorer
             return runningApps;
         }
 
-
         public void SaveRunningApps()
         {
             //var runningApps = new List<string>();
@@ -121,6 +120,9 @@ namespace AppRestorer
 
             // Ignore any apps that already start on login
             var registryApps = GetStartupApps();
+
+            // TODO: Finish compare logic with runningApps
+            var shellStart = StartupAnalyzer.GetShellStartupFilesAndContents();
 
             // Traverse all running processes
             foreach (var proc in Process.GetProcesses())
