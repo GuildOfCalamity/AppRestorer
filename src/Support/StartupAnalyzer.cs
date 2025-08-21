@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using System.Text;
 using Microsoft.Win32;
 
 namespace AppRestorer
@@ -418,8 +420,7 @@ namespace AppRestorer
             try
             {
                 // Get current user's Startup folder
-                string startupPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup)
-                );
+                string startupPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup));
 
                 if (!Directory.Exists(startupPath))
                     return results;
@@ -430,8 +431,13 @@ namespace AppRestorer
                     string content = string.Empty;
 
                     try
-                    {   // Try to read as text
-                        content = File.ReadAllText(file);
+                    {
+                        // Try to read as text
+                        var enc = SniffEncoding(file);
+                        if (Path.GetExtension(file).Contains(".lnk", StringComparison.OrdinalIgnoreCase))
+                            content = ExtractUsableText(file);
+                        else
+                            content = File.ReadAllText(file, enc);
                     }
                     catch (Exception ex)
                     {
@@ -449,6 +455,42 @@ namespace AppRestorer
 
             return results;
         }
+
+        /// <summary>
+        /// Skips the ctrl chars and high‑ASCII noise, then collapses the survivors into a string.
+        /// </summary>
+        public static string ExtractUsableText(string path)
+        {
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(path);
+                var filtered = bytes
+                    .Where(b => b >= 0x20 && b <= 0x7E || b == 0x0A || b == 0x0D) // printable ASCII + CR/LF
+                    .Select(b => (char)b)
+                    .ToArray();
+                return new string(filtered);
+            }
+            catch (Exception) { return string.Empty; }
+        }
+
+
+        public static Encoding SniffEncoding(FileInfo file) => SniffEncoding(file.FullName);
+        public static Encoding SniffEncoding(string filePath)
+        {
+            try
+            {   // detectEncodingFromByteOrderMarks = true (enables BOM sniffing)
+                using (var reader = new StreamReader(filePath, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+                {
+                    return reader.CurrentEncoding;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ERROR]: {ex.Message}");
+            }
+            return Encoding.Default;
+        }
+
 
         /// <summary>
         /// Example usage

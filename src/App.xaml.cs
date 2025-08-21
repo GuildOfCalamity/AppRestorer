@@ -22,8 +22,8 @@ namespace AppRestorer
         bool _deepDive = false;
         public string saveFileName = "apps.json";
         public List<StartupEntry> startupEntries = new List<StartupEntry>();
-        public static Uri FavEnabled = new Uri(@"Assets\FavoriteIcon3.png", UriKind.Relative);
-        public static Uri FavDisabled = new Uri(@"Assets\FavoriteIcon4.png", UriKind.Relative);
+        public static Uri FavEnabled = new Uri(@"Assets\FavoriteIcon9.png", UriKind.Relative);
+        public static Uri FavDisabled = new Uri(@"Assets\FavoriteIcon10.png", UriKind.Relative);
 
         #region [Overrides]
         protected override void OnStartup(StartupEventArgs e)
@@ -71,6 +71,9 @@ namespace AppRestorer
             // Ignore any apps that already start on login
             var registryApps = GetStartupApps();
 
+            // TODO: Finish compare logic with runningApps
+            var shellStart = StartupAnalyzer.GetShellStartupFilesAndContents();
+
             // Traverse all running processes
             foreach (var proc in Process.GetProcesses())
             {
@@ -101,8 +104,12 @@ namespace AppRestorer
                             }
                             else
                             {
-                                //runningApps.Add(proc.MainModule.FileName);
-                                runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                                var shellFound = shellStart.Any(s => !string.IsNullOrEmpty(s.Value) && s.Value.Contains(proc.MainModule.FileName));
+                                if (!shellFound)
+                                {
+                                    //runningApps.Add(proc.MainModule.FileName);
+                                    runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                                }
                             }
                         }
                     }
@@ -115,53 +122,9 @@ namespace AppRestorer
 
         public void SaveRunningApps()
         {
-            //var runningApps = new List<string>();
-            var runningApps = new List<RestoreItem>();
-
-            // Ignore any apps that already start on login
-            var registryApps = GetStartupApps();
-
-            // TODO: Finish compare logic with runningApps
-            var shellStart = StartupAnalyzer.GetShellStartupFilesAndContents();
-
-            // Traverse all running processes
-            foreach (var proc in Process.GetProcesses())
-            {
-                try
-                {
-                    // Don't include OS modules/services or firewall/vpn clients, as they typically
-                    // start on their own or as needed. These strings can be moved to a config.
-
-                    if (proc.MainWindowHandle != IntPtr.Zero && // if no window handle then possibly a service 
-                        !string.IsNullOrEmpty(proc.MainModule?.FileName) &&
-                        !proc.MainModule.FileName.ToLower().Contains("\\cisco") &&       // VPN client
-                        !proc.MainModule.FileName.ToLower().Contains("\\sonicwall") &&   // VPN client
-                        !proc.MainModule.FileName.ToLower().Contains("\\fortigate") &&   // VPN client
-                        !proc.MainModule.FileName.ToLower().Contains("\\windowsapps") && // Outlook, Teams, etc
-                        !proc.MainModule.FileName.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Self, duplicate, and registry startup checks
-                        if (!runningApps.Any(ri => ri.Location.Contains(proc.MainModule.FileName)) && 
-                            !proc.MainModule.FileName.EndsWith(GetSelfName(), StringComparison.OrdinalIgnoreCase) &&
-                            !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
-                        {
-                            if (_deepDive)
-                            {
-                                if (startupEntries.Any(ent => !string.IsNullOrEmpty(ent.Command) && !ent.Command.Contains("non-exec or no action") && !ent.Command.Contains(proc.MainModule.FileName)))
-                                    runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
-                                else
-                                    Debug.WriteLine($"[WARNING] {proc.MainModule.FileName} was found as part of the StartupEntries catalog, skipping module.");
-                            }
-                            else
-                            {
-                                //runningApps.Add(proc.MainModule.FileName);
-                                runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
-                            }
-                        }
-                    }
-                }
-                catch (Exception) { /* Ignore processes we can't access */ }
-            }
+            var runningApps = CollectRunningApps();
+            if (runningApps.Count == 0)
+                return;
 
             try
             {
@@ -172,6 +135,9 @@ namespace AppRestorer
 
         public void SaveExistingApps(List<RestoreItem> appList)
         {
+            if (appList.Count == 0)
+                return;
+
             try
             {
                 File.WriteAllText(saveFileName, JsonSerializer.Serialize(appList, new JsonSerializerOptions { WriteIndented = true }));
@@ -205,9 +171,9 @@ namespace AppRestorer
             catch { /* Ignore */ }
         }
 
-        public static bool ShowMessage(string message, Window? owner = null)
+        public static bool ShowMessage(string message, string title = "Notice", Window? owner = null)
         {
-            var msgBox = new MessageBoxWindow(message);
+            var msgBox = new MessageBoxWindow(message, title);
             if (owner != null) 
             { 
                 msgBox.Owner = owner;
@@ -325,14 +291,5 @@ namespace AppRestorer
             str.WriteToLog();
         }
         #endregion
-    }
-
-    /// <summary>
-    /// Basic data model
-    /// </summary>
-    public class RestoreItem
-    {
-        public string? Location { get; set; }
-        public bool Favorite { get; set; }
     }
 }

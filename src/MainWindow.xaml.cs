@@ -26,30 +26,23 @@ namespace AppRestorer
         bool _firstRun;
         double _interval;
         DateTime _lastUse;
+        MainViewModel? _vm;
         #endregion
 
         public MainWindow()
         {
             InitializeComponent();
 
-            #region [Testing preserve favorites even if closed]
-            var list1 = new List<RestoreItem>();
-            list1.Add(new RestoreItem { Location = @"D:\cache\thing1.exe", Favorite = false });
-            list1.Add(new RestoreItem { Location = @"D:\cache\thing2.exe", Favorite = true });
-            var list2 = new List<RestoreItem>();
-            list2.Add(new RestoreItem { Location = @"D:\cache\thing1.exe", Favorite = false });
-            var finalists = PreserveFavoritesWithMerge(list1, list2);
+            // We'll pass the MainWindow to the VM so common Window events will become simpler to work with.
+            this.DataContext = new MainViewModel(this);
 
-            list2 = list1.Join(list1, 
-                t => t.Location, 
-                s => s.Location,
-                (t, s) => 
-                { 
-                    t.Favorite = s.Favorite; 
-                    return t; 
-                })
-                .ToList();
-            #endregion
+            // This simple app doesn't really need a VM, but it's good practice.
+            _vm = DataContext as MainViewModel;
+
+            if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
+                Debug.WriteLine("[INFO] XAML system is in design mode.");
+            else
+                Debug.WriteLine("[INFO] XAML system is not in design mode.");
 
             #region [Persistent settings]
             ConfigManager.OnError += (sender, ex) => 
@@ -90,40 +83,6 @@ namespace AppRestorer
             #endregion
         }
 
-        /// <summary>
-        /// In the event that a favorite is closed, we should remember it in the data.
-        /// </summary>
-        public List<RestoreItem> PreserveFavoritesWithMerge(List<RestoreItem> sourceList, List<RestoreItem>? targetList)
-        {
-            if (targetList == null || targetList.Count == 0)
-                targetList = _app?.CollectRunningApps();
-
-            var lookup = sourceList
-                .Where(s => s.Location != null)
-                .ToDictionary(s => s.Location!, s => s.Favorite, StringComparer.OrdinalIgnoreCase);
-
-            // Start with updated targetList
-            var result = targetList
-                .Select(t =>
-                {
-                    if (t.Location != null && lookup.TryGetValue(t.Location, out var fav))
-                        t.Favorite = fav;
-                    return t;
-                })
-                .ToList();
-
-            // Add any missing Favorites from sourceList
-            var existingLocations = new HashSet<string?>(result.Select(r => r.Location), StringComparer.OrdinalIgnoreCase);
-
-            var missingFavorites = sourceList
-                .Where(s => s.Favorite && !existingLocations.Contains(s.Location))
-                .ToList();
-
-            result.AddRange(missingFavorites);
-
-            return result;
-        }
-
         #region [Events]
         void Restore_Click(object sender, RoutedEventArgs e)
         {
@@ -139,7 +98,7 @@ namespace AppRestorer
                 tbStatus.Text = $"Please select apps to restore";
                 return;
             }
-            bool answer = App.ShowMessage($"Do you wish to restore {enabled} {(enabled == 1 ? "app?" : "apps?")}", this);
+            bool answer = App.ShowMessage($"Do you wish to restore {enabled} {(enabled == 1 ? "app?" : "apps?")}", "Confirm", this);
             if (!answer)
             {
                 tbStatus.Text = $"User canceled restore at {DateTime.Now.ToLongTimeString()}";
@@ -208,10 +167,16 @@ namespace AppRestorer
                 ButtonBackup.IsEnabled = false;
             else
                 ButtonBackup.IsEnabled = true;
+
+            if (btnSpin.Visibility == Visibility.Hidden)
+                btnSpin.Visibility = Visibility.Visible;
         }
 
         void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            _vm!.StatusText = $"Loading…";
+            _vm!.IsBusy = true;
+
             if (_appList == null)
                 InitAndLoadApps();
 
@@ -221,8 +186,7 @@ namespace AppRestorer
                 InitAndLoadApps();
             }
 
-
-            tbStatus.Text = $"Select any of the {_appList?.Count} apps to restore…";
+            _vm!.StatusText = $"Select any of the {_appList?.Count} apps to restore…";
 
             // Check for previous apps
             if (System.IO.File.Exists(_app?.saveFileName))
@@ -232,7 +196,7 @@ namespace AppRestorer
                     var apps = JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(_app.saveFileName));
                     if (apps != null && apps.Any())
                     {
-                        bool answer = App.ShowMessage($"Do you wish to restore {_appList?.Count} {(_appList?.Count == 1 ? "app?" : "apps?")}", this);
+                        bool answer = App.ShowMessage($"Do you wish to restore {_appList?.Count} {(_appList?.Count == 1 ? "app?" : "apps?")}", owner: this);
                         if (answer)
                         {
                             int extend = 0;
@@ -255,6 +219,8 @@ namespace AppRestorer
 
             if (_timer != null)
                 tbStatus.Text = $"Next check will occur {_timer.Interval.DescribeFutureTime()}";
+
+            //_vm!.IsBusy = false;
         }
 
         void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -281,15 +247,22 @@ namespace AppRestorer
         void Minimize_Click(object sender, RoutedEventArgs e)
         {
             if (this.WindowState == WindowState.Normal)
+            {
                 this.WindowState = WindowState.Minimized;
+                btnSpin.Visibility = Visibility.Hidden;
+            }
         }
 
         void LoadBackup_Click(object sender, RoutedEventArgs e)
         {
-            var prevFile = $"{_app?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
-            _appList = _app?.LoadSavedApps(prevFile).OrderBy(o => o).ToList();
-            AppList.ItemsSource = null;
-            AppList.ItemsSource = _appList;
+            bool answer = App.ShowMessage($"Are you sure?", "Load Backup", this);
+            if (answer)
+            {
+                var prevFile = $"{_app?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
+                _appList = _app?.LoadSavedApps(prevFile).OrderBy(o => o).ToList();
+                AppList.ItemsSource = null;
+                AppList.ItemsSource = _appList;
+            }
         }
 
         void Favorite_MouseDown(object sender, MouseButtonEventArgs e)
@@ -324,6 +297,14 @@ namespace AppRestorer
                 }
             }
         }
+
+        /// <summary>
+        /// Reserved for debugging
+        /// </summary>
+        void Spinner_Click(object sender, RoutedEventArgs e)
+        {
+            //tbStatus.Text = $"Enabled count: {GetEnabledAppCount()}";
+        }
         #endregion
 
         #region [Helpers]
@@ -333,6 +314,40 @@ namespace AppRestorer
             _appList = _app.LoadSavedApps().OrderBy(o => o.Location).ToList();
             AppList.ItemsSource = null;
             AppList.ItemsSource = _appList;
+        }
+
+        /// <summary>
+        /// In the event that a favorite is closed, we should remember it in the data.
+        /// </summary>
+        public List<RestoreItem>? PreserveFavoritesWithMerge(List<RestoreItem> sourceList, List<RestoreItem>? targetList)
+        {
+            if (targetList == null || targetList.Count == 0)
+                targetList = _app?.CollectRunningApps();
+
+            var lookup = sourceList
+                .Where(s => s.Location != null)
+                .ToDictionary(s => s.Location!, s => s.Favorite, StringComparer.OrdinalIgnoreCase);
+
+            // Start with updated targetList
+            var result = targetList?
+                .Select(t =>
+                {
+                    if (t.Location != null && lookup.TryGetValue(t.Location, out var fav))
+                        t.Favorite = fav;
+                    return t;
+                })
+                .ToList();
+
+            // Add any missing Favorites from sourceList
+            var existingLocations = new HashSet<string?>(result?.Select(r => r.Location) ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+
+            var missingFavorites = sourceList
+                .Where(s => s.Favorite && !existingLocations.Contains(s.Location))
+                .ToList();
+
+            result?.AddRange(missingFavorites);
+
+            return result;
         }
 
         int GetEnabledAppCount()
@@ -477,6 +492,27 @@ namespace AppRestorer
             var result = await asyncTimedTask.ResultTask;
             Debug.WriteLine("Final Async Result: " + result);
             #endregion
+        }
+
+        void TestingJoinPreserve()
+        {
+            #region [Testing preserve favorites even if closed]
+            var list1 = new List<RestoreItem>();
+            list1.Add(new RestoreItem { Location = @"D:\cache\thing1.exe", Favorite = false });
+            list1.Add(new RestoreItem { Location = @"D:\cache\thing2.exe", Favorite = true });
+            var list2 = new List<RestoreItem>();
+            list2.Add(new RestoreItem { Location = @"D:\cache\thing1.exe", Favorite = false });
+            var finalists = PreserveFavoritesWithMerge(list1, list2);
+
+            // Using a join
+            var result = list2.Join(list1, t => t.Location, s => s.Location,
+                (t, s) =>
+                {
+                    t.Favorite = s.Favorite;
+                    return t;
+                }).ToList();
+            #endregion
+
         }
         #endregion
     }

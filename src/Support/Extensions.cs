@@ -221,6 +221,14 @@ namespace AppRestorer
         }
 
         /// <summary>
+        /// Converts a DateTime to a DateTimeOffset with the specified offset
+        /// </summary>
+        /// <param name="date">The DateTime to convert</param>
+        /// <param name="offset">The offset to apply to the date field</param>
+        /// <returns>The corresponding DateTimeOffset</returns>
+        public static DateTimeOffset ToOffset(this DateTime date, TimeSpan offset) => new DateTimeOffset(date).ToOffset(offset);
+
+        /// <summary>
         /// Generate a random brush
         /// </summary>
         /// <returns><see cref="SolidColorBrush"/></returns>

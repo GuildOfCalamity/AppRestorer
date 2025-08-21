@@ -134,7 +134,14 @@
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>
-
+            <LinearGradientBrush x:Key="TitleBrushDark" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#333" />
+                        <GradientStop Offset="1.0" Color="#999" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
             <LinearGradientBrush x:Key="SlideValueBrush" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
@@ -142,6 +149,11 @@
                         <GradientStop Offset="1.0" Color="#0F0FEF" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="TooltipBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Offset="0" Color="#606060" />
+                <GradientStop Offset="0.3" Color="#303030" />
+                <GradientStop Offset="1" Color="#202020" />
             </LinearGradientBrush>
             <RadialGradientBrush x:Key="sliderNormRadialBrush">
                 <GradientStop Offset="0" Color="#40AFAEAE" />
@@ -219,6 +231,45 @@
                 </Setter>
             </Style>
             <!--#endregion-->
+
+            <!--  ToolTip Styler  -->
+            <Style TargetType="{x:Type ToolTip}">
+                <Setter Property="Padding" Value="0,4" />
+                <Setter Property="Placement" Value="Mouse" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToolTip">
+                            <Border
+                                Padding="{TemplateBinding Padding}"
+                                Background="{StaticResource TooltipBrush}"
+                                BorderBrush="#606060"
+                                BorderThickness="1"
+                                CornerRadius="5">
+                                <TextBlock
+                                    Margin="10,2"
+                                    FontSize="14"
+                                    Foreground="WhiteSmoke"
+                                    Text="{TemplateBinding Content}">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect
+                                            BlurRadius="2"
+                                            Direction="300"
+                                            Opacity="0.7"
+                                            ShadowDepth="1"
+                                            Color="#2f2f2f" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                                <!--<ContentPresenter
+                                Margin="10,0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}" />-->
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
             <!--  Slider styler  -->
             <Style TargetType="{x:Type Slider}">
@@ -695,6 +746,79 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <!--#region [Animated Button using Image]-->
+            <Style x:Key="SpinButton" TargetType="{x:Type Button}">
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border
+                                x:Name="border"
+                                Background="Transparent"
+                                CornerRadius="5">
+                                <StackPanel>
+                                    <Image
+                                        Height="{Binding Height, RelativeSource={RelativeSource TemplatedParent}}"
+                                        Margin="1"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Top"
+                                        RenderOptions.BitmapScalingMode="Fant"
+                                        Source="{TemplateBinding Tag}" />
+                                    <ContentPresenter
+                                        x:Name="ButtonContentPresenter"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <!--  You may need to adjust the TransformOrigin values based on the image dimensions.  -->
+                <Setter Property="RenderTransformOrigin" Value="0.5, 0.5" />
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <RotateTransform />
+                    </Setter.Value>
+                </Setter>
+                <Style.Resources>
+                    <Storyboard x:Key="Spin">
+                        <!--  ** To spin 360 degrees **  -->
+                        <DoubleAnimation
+                            RepeatBehavior="Forever"
+                            Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                            From="0"
+                            To="360"
+                            Duration="0:0:2.7" />
+                        <!--  ** To rotate 180 and then rotate back **
+                        <DoubleAnimation
+                            AccelerationRatio="0.5"
+                            AutoReverse="True"
+                            DecelerationRatio="0.5"
+                            RepeatBehavior="Forever"
+                            Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                            From="-10"
+                            To="190"
+                            Duration="0:0:2.7" />
+                        -->
+                    </Storyboard>
+                </Style.Resources>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=IsVisible}" Value="True">
+                        <DataTrigger.EnterActions>
+                            <BeginStoryboard Name="SpinStoryboard" Storyboard="{StaticResource Spin}" />
+                        </DataTrigger.EnterActions>
+                        <DataTrigger.ExitActions>
+                            <RemoveStoryboard BeginStoryboardName="SpinStoryboard" />
+                        </DataTrigger.ExitActions>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!--#endregion [Animated Button using Image]-->
+
 
         </ResourceDictionary>
     </Application.Resources>

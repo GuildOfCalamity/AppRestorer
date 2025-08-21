@@ -23,6 +23,9 @@
     <None Remove="AppIcon.png" />
     <None Remove="Assets\Apps.png" />
     <None Remove="Assets\FavoriteIcon1.png" />
+    <None Remove="Assets\FavoriteIcon10.png" />
+    <None Remove="Assets\FavoriteIcon11.png" />
+    <None Remove="Assets\FavoriteIcon12.png" />
     <None Remove="Assets\FavoriteIcon2.png" />
     <None Remove="Assets\FavoriteIcon3.png" />
     <None Remove="Assets\FavoriteIcon4.png" />
@@ -30,6 +33,12 @@
     <None Remove="Assets\FavoriteIcon6.png" />
     <None Remove="Assets\FavoriteIcon7.png" />
     <None Remove="Assets\FavoriteIcon8.png" />
+    <None Remove="Assets\FavoriteIcon9.png" />
+    <None Remove="Assets\Spinner2.png" />
+    <None Remove="Assets\Spinner3.png" />
+    <None Remove="Assets\Spinner4.png" />
+    <None Remove="Assets\Spinner5.png" />
+    <None Remove="Assets\Spinner6.png" />
     <None Remove="WarningIcon2.png" />
     <None Remove="WarningIcon3.png" />
     <None Remove="WarningIcon4.png" />
@@ -43,6 +52,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\FavoriteIcon1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon10.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon11.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon12.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\FavoriteIcon2.png">
@@ -64,6 +82,27 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\FavoriteIcon8.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\FavoriteIcon9.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Spinner1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Spinner2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Spinner3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Spinner4.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Spinner5.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Spinner6.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\WarningIcon1.png">

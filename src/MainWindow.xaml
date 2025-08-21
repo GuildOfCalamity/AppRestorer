@@ -22,6 +22,13 @@
     WindowStyle="None"
     mc:Ignorable="d">
 
+    <!--  we'll do this in the code-behind  -->
+    <!--
+    <Window.DataContext>
+        <local:MainViewModel />
+    </Window.DataContext>
+    -->
+
     <Border
         MinWidth="350"
         MinHeight="150"
@@ -42,13 +49,32 @@
         </Border.Effect>
 
         <DockPanel>
-            <TextBlock
-                x:Name="tbStatus"
-                Margin="15,10,5,0"
+            <StackPanel
+                Margin="0"
                 DockPanel.Dock="Top"
-                FontSize="16"
-                Foreground="{StaticResource TitleBrush}"
-                Text="Select apps to restore…" />
+                Orientation="Horizontal">
+                <Button
+                    x:Name="btnSpin"
+                    Height="30"
+                    Margin="0,-2,2,0"
+                    VerticalAlignment="Top"
+                    Click="Spinner_Click"
+                    Opacity="0.9"
+                    Style="{StaticResource SpinButton}"
+                    Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+                    <Button.Tag>
+                        <ImageSource>/Assets/Spinner6.png</ImageSource>
+                    </Button.Tag>
+                </Button>
+                <TextBlock
+                    x:Name="tbStatus"
+                    MinHeight="30"
+                    Margin="15,4,5,0"
+                    FontSize="16"
+                    Foreground="{StaticResource TitleBrush}"
+                    Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+            </StackPanel>
+
             <Border
                 x:Name="Border"
                 Margin="10"

@@ -75,7 +75,7 @@
                 </Grid>
                 <Border
                     Margin="-18,2,-18,0"
-                    BorderBrush="{StaticResource TitleBrush}"
+                    BorderBrush="{StaticResource TitleBrushDark}"
                     BorderThickness="0,0,0,2"
                     CornerRadius="4" />
             </StackPanel>
@@ -85,7 +85,7 @@
             <TextBlock
                 x:Name="MessageText"
                 Grid.Row="1"
-                Margin="20"
+                Margin="20,10,20,30"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
                 FontSize="20"
