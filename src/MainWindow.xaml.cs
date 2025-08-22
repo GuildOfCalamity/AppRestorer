@@ -27,10 +27,17 @@ namespace AppRestorer
         double _interval;
         DateTime _lastUse;
         MainViewModel? _vm;
+        LinearGradientBrush _lvl0 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(120, 120, 120));
+        LinearGradientBrush _lvl1 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(0, 181, 255));
+        LinearGradientBrush _lvl2 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 216, 0));
+        LinearGradientBrush _lvl3 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 106, 0));
+        LinearGradientBrush _lvl4 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 0, 0));
         #endregion
 
         public MainWindow()
         {
+            Debug.WriteLine($"{System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{System.Reflection.MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
+
             InitializeComponent();
 
             // We'll pass the MainWindow to the VM so common Window events will become simpler to work with.
@@ -64,20 +71,18 @@ namespace AppRestorer
             _timer.Interval = TimeSpan.FromMinutes(_interval);
             _timer.Tick += (s, ev) =>
             {
-                _app?.BackupAppFile();
+                _vm?.BackupAppFile(false);
                 if (_appList?.Count > 0)
                 {
-                    var finalists = PreserveFavoritesWithMerge(_appList, _app?.CollectRunningApps());
-                    _app?.SaveExistingApps(finalists);
+                    var finalists = PreserveFavoritesWithMerge(_appList, _vm?.CollectRunningApps());
+                    _vm?.SaveExistingApps(finalists);
                 }
                 else
-                    _app?.SaveRunningApps();
-
-                // Good practice in the event that timer is changed to different type other than DispatcherTimer.
-                tbStatus.Dispatcher.Invoke(delegate ()
                 {
-                    tbStatus.Text = $"Next check will occur {_timer.Interval.DescribeFutureTime()}";
-                });
+                    _vm?.SaveRunningApps();
+                }
+
+                UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
             };
             _timer.Start();
             #endregion
@@ -88,20 +93,20 @@ namespace AppRestorer
         {
             if (AppList == null || AppList.Items == null || AppList.Items.Count == 0)
             {
-                tbStatus.Text = $"No apps to restore at {DateTime.Now.ToLongTimeString()}";
+                UpdateText(tbStatus, $"No apps to restore at {DateTime.Now.ToLongTimeString()}");
                 return;
             }
 
             int enabled = GetEnabledAppCount();
             if (enabled == 0)
             {
-                tbStatus.Text = $"Please select apps to restore";
+                UpdateText(tbStatus, $"Please select apps to restore");
                 return;
             }
             bool answer = App.ShowMessage($"Do you wish to restore {enabled} {(enabled == 1 ? "app?" : "apps?")}", "Confirm", this);
             if (!answer)
             {
-                tbStatus.Text = $"User canceled restore at {DateTime.Now.ToLongTimeString()}";
+                UpdateText(tbStatus, $"User canceled restore at {DateTime.Now.ToLongTimeString()}");
                 return;
             }
 
@@ -120,11 +125,11 @@ namespace AppRestorer
                     {
                         if (IsAppRunning($"{ri.Location}"))
                         {
-                            tbStatus.Text = $"Already running '{ri.Location}'";
+                            UpdateText(tbStatus, $"Already running '{ri.Location}'");
                             continue;
                         }
                         // Attempt to start the application
-                        tbStatus.Text = $"Restoring application '{ri.Location}'";
+                        UpdateText(tbStatus, $"Restoring application '{ri.Location}'");
                         extend++;
                         _ = TimedTask.Schedule(() =>
                         {
@@ -135,7 +140,7 @@ namespace AppRestorer
                     }
                 }
             }
-            tbStatus.Text = $"Restoration process complete {DateTime.Now.ToLongTimeString()}";
+            UpdateText(tbStatus, $"Restoration process complete {DateTime.Now.ToLongTimeString()}");
         }
 
         void Invert_Click(object sender, RoutedEventArgs e)
@@ -162,38 +167,48 @@ namespace AppRestorer
 
         void Window_Activated(object sender, EventArgs e)
         {
-            // Check for backups
-            if (!System.IO.File.Exists($"{_app?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak"))
+            // Check for recent backup
+            if (!System.IO.File.Exists($"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak"))
                 ButtonBackup.IsEnabled = false;
             else
                 ButtonBackup.IsEnabled = true;
 
-            if (btnSpin.Visibility == Visibility.Hidden)
-                btnSpin.Visibility = Visibility.Visible;
+            //if (this.WindowState == WindowState.Normal && btnSpin.Visibility == Visibility.Hidden)
+            //    btnSpin.Visibility = Visibility.Visible;
+
+            // EventBus demonstration
+            App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Activated: {this.WindowState}");
         }
+
+        void Window_Deactivated(object sender, EventArgs e)
+        {
+            // EventBus demonstration
+            App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Deactivated: {this.WindowState}");
+        }
+
 
         void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            _vm!.StatusText = $"Loading…";
-            _vm!.IsBusy = true;
+            //_vm!.IsBusy = true;
+            UpdateText(tbStatus, $"Loading…");
 
             if (_appList == null)
                 InitAndLoadApps();
 
             if (_appList?.Count == 0)
             {
-                _app?.SaveRunningApps();
+                _vm?.SaveRunningApps();
                 InitAndLoadApps();
             }
 
-            _vm!.StatusText = $"Select any of the {_appList?.Count} apps to restore…";
+            UpdateText(tbStatus, $"Select any of the {_appList?.Count} apps to restore…");
 
             // Check for previous apps
-            if (System.IO.File.Exists(_app?.saveFileName))
+            if (System.IO.File.Exists(_vm?.saveFileName ?? "apps.json"))
             {
                 try
                 {
-                    var apps = JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(_app.saveFileName));
+                    var apps = JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(_vm?.saveFileName ?? "apps.json"));
                     if (apps != null && apps.Any())
                     {
                         bool answer = App.ShowMessage($"Do you wish to restore {_appList?.Count} {(_appList?.Count == 1 ? "app?" : "apps?")}", owner: this);
@@ -218,8 +233,8 @@ namespace AppRestorer
             }
 
             if (_timer != null)
-                tbStatus.Text = $"Next check will occur {_timer.Interval.DescribeFutureTime()}";
-
+                UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
+                
             //_vm!.IsBusy = false;
         }
 
@@ -229,9 +244,9 @@ namespace AppRestorer
             ConfigManager.Set("PollIntervalInMinutes", value: _interval);
             ConfigManager.Set("LastUse", value: DateTime.Now);
             if (_appList?.Count > 0)
-                _app?.SaveExistingApps(_appList);
+                _vm?.SaveExistingApps(_appList);
             else
-                _app?.SaveRunningApps();
+                _vm?.SaveRunningApps();
         }
 
         void MainControl_MouseDown(object sender, MouseButtonEventArgs e)
@@ -258,10 +273,22 @@ namespace AppRestorer
             bool answer = App.ShowMessage($"Are you sure?", "Load Backup", this);
             if (answer)
             {
-                var prevFile = $"{_app?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
-                _appList = _app?.LoadSavedApps(prevFile).OrderBy(o => o).ToList();
-                AppList.ItemsSource = null;
-                AppList.ItemsSource = _appList;
+                int count = 0;
+                var prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
+                while (!System.IO.File.Exists(prevFile) && ++count < 30)
+                {
+                    prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1 * count):yyyyMMdd}.bak";
+                }
+                try
+                {
+                    _appList = _vm?.LoadSavedApps(prevFile).OrderBy(o => o.Location).ToList();
+                    AppList.ItemsSource = null;
+                    AppList.ItemsSource = _appList;
+                }
+                catch (Exception) 
+                { 
+                    UpdateText(tbStatus, $"Failed to load from backup ({prevFile})", 3); 
+                }
             }
         }
 
@@ -283,12 +310,12 @@ namespace AppRestorer
                             if (data.Favorite)
                             {
                                 data.Favorite = false;
-                                img.Source = new BitmapImage(App.FavDisabled);
+                                img.Source = new BitmapImage(Constants.FavDisabled);
                             }
                             else
                             {
                                 data.Favorite = true;
-                                img.Source = new BitmapImage(App.FavEnabled);
+                                img.Source = new BitmapImage(Constants.FavEnabled);
                             }
                             //Debug.WriteLine($"{new string('=', 60)}");
                             //foreach (var item in _appList) { Debug.WriteLine($"[INFO] Favorite: {item.Favorite}"); }
@@ -303,15 +330,70 @@ namespace AppRestorer
         /// </summary>
         void Spinner_Click(object sender, RoutedEventArgs e)
         {
-            //tbStatus.Text = $"Enabled count: {GetEnabledAppCount()}";
+            UpdateText(tbStatus, $"{App.RuntimeInfo}", 1);
         }
         #endregion
 
         #region [Helpers]
+        /// <summary>
+        /// Thread-safe content update for any <see cref="FrameworkElement"/>.
+        /// </summary>
+        /// <param name="fe"><see cref="FrameworkElement"/></param>
+        /// <param name="text">message to display</param>
+        /// <param name="level">0=ordinary, 1=notice, 2=warning, 3=error, 4=critical</param>
+        public void UpdateText(FrameworkElement fe, string text, int level = 0)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            fe.Dispatcher.Invoke(delegate ()
+            {
+                if (fe is TextBlock tbl)
+                {
+                    switch (level)
+                    {
+                        case 0: tbl.Foreground  = _lvl0; break;
+                        case 1: tbl.Foreground  = _lvl1; break;
+                        case 2: tbl.Foreground  = _lvl2; break;
+                        case 3: tbl.Foreground  = _lvl3; break;
+                        case 4: tbl.Foreground  = _lvl4; break;
+                        default: tbl.Foreground = _lvl0; break;
+                    }
+                    tbl.Text = $"{text}";
+                }
+                else if (fe is TextBox tbx)
+                {
+                    switch (level)
+                    {
+                        case 0: tbx.Foreground  = _lvl0; break;
+                        case 1: tbx.Foreground  = _lvl1; break;
+                        case 2: tbx.Foreground  = _lvl2; break;
+                        case 3: tbx.Foreground  = _lvl3; break;
+                        case 4: tbx.Foreground  = _lvl4; break;
+                        default: tbx.Foreground = _lvl0; break;
+                    }
+                    tbx.Text = $"{text}";
+                }
+                else if (fe is CheckBox cbx)
+                {
+                    switch (level)
+                    {
+                        case 0: cbx.Foreground  = _lvl0; break;
+                        case 1: cbx.Foreground  = _lvl1; break;
+                        case 2: cbx.Foreground  = _lvl2; break;
+                        case 3: cbx.Foreground  = _lvl3; break;
+                        case 4: cbx.Foreground  = _lvl4; break;
+                        default: cbx.Foreground = _lvl0; break;
+                    }
+                    cbx.Content = $"{text}";
+                }
+            });
+        }
+
         void InitAndLoadApps()
         {
             _app = (App)Application.Current;
-            _appList = _app.LoadSavedApps().OrderBy(o => o.Location).ToList();
+            _appList = _vm?.LoadSavedApps().OrderBy(o => o.Location).ToList();
             AppList.ItemsSource = null;
             AppList.ItemsSource = _appList;
         }
@@ -322,7 +404,7 @@ namespace AppRestorer
         public List<RestoreItem>? PreserveFavoritesWithMerge(List<RestoreItem> sourceList, List<RestoreItem>? targetList)
         {
             if (targetList == null || targetList.Count == 0)
-                targetList = _app?.CollectRunningApps();
+                targetList = _vm?.CollectRunningApps();
 
             var lookup = sourceList
                 .Where(s => s.Location != null)
@@ -505,7 +587,7 @@ namespace AppRestorer
             var finalists = PreserveFavoritesWithMerge(list1, list2);
 
             // Using a join
-            var result = list2.Join(list1, t => t.Location, s => s.Location,
+            List<RestoreItem>? result = list2.Join(list1, t => t.Location, s => s.Location,
                 (t, s) =>
                 {
                     t.Favorite = s.Favorite;

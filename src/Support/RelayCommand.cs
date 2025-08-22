@@ -24,7 +24,7 @@ namespace AppRestorer
         /// <summary>
         /// The event thats fired when the <see cref="CanExecute(object)"/> value has changed
         /// </summary>
-        public event EventHandler CanExecuteChanged = (sender, e) => { };
+        public event EventHandler? CanExecuteChanged = (sender, e) => { };
 
         #endregion
 
@@ -47,7 +47,7 @@ namespace AppRestorer
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
             return true;
         }
@@ -56,7 +56,7 @@ namespace AppRestorer
         /// Executes the commands Action
         /// </summary>
         /// <param name="parameter"></param>
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
             try
             {
@@ -80,7 +80,7 @@ namespace AppRestorer
         private Action<T> execute;
         private Func<T, bool> canExecute;
 
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged
         {
             add { CommandManager.RequerySuggested += value; }
             remove { CommandManager.RequerySuggested -= value; }
@@ -93,12 +93,12 @@ namespace AppRestorer
         }
 
         #region [Command Methods]
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
             return this.canExecute == null || this.canExecute((T)parameter);
         }
 
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
             //if (parameter is System.Windows.Controls.TextBox obj1)
             //    System.Diagnostics.Debug.WriteLine($">> Object {obj1?.Name} is a TextBox");
@@ -114,7 +114,7 @@ namespace AppRestorer
             }
         }
 
-        public override string ToString() => $"RelayCommand<{execute?.Target}> bound to event {execute?.Method.Name}";
+        public override string ToString() => $"RelayCommand<{execute?.Target}> bound to event {execute?.Method?.Name}";
         #endregion
     }
     #endregion

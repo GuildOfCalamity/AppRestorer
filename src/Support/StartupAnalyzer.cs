@@ -190,6 +190,7 @@ namespace AppRestorer
                 if (shellType == null)
                     return shortcutPath;
 
+                // create the System.__ComObject
                 dynamic? shell = Activator.CreateInstance(shellType);
                 dynamic? lnk = shell?.CreateShortcut(shortcutPath);
 
@@ -209,6 +210,33 @@ namespace AppRestorer
                 // Fall back to returning the .lnk path
             }
             return shortcutPath;
+        }
+
+        static string TryResolveShortcutReturnEmptyIfFails(string shortcutPath)
+        {
+            try
+            {
+                var shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType == null)
+                    return shortcutPath;
+
+                // create the System.__ComObject
+                dynamic? shell = Activator.CreateInstance(shellType);
+                dynamic? lnk = shell?.CreateShortcut(shortcutPath);
+
+                string? target = lnk?.TargetPath as string;
+                string? args = lnk?.Arguments as string;
+
+                if (!string.IsNullOrWhiteSpace(target))
+                {
+                    var cmd = $"\"{target}\"";
+                    if (!string.IsNullOrWhiteSpace(args))
+                        cmd += " " + args;
+                    return cmd;
+                }
+            }
+            catch { /* Ignore */ }
+            return string.Empty;
         }
 
         /// <summary>
@@ -435,7 +463,14 @@ namespace AppRestorer
                         // Try to read as text
                         var enc = SniffEncoding(file);
                         if (Path.GetExtension(file).Contains(".lnk", StringComparison.OrdinalIgnoreCase))
-                            content = ExtractUsableText(file);
+                        {
+                            content = TryResolveShortcutReturnEmptyIfFails(file);
+                            if (string.IsNullOrEmpty(content)) 
+                            {
+                                content = ExtractUsableText(file);
+                                //List<string> lines = ExtractUtf16LeStrings(file);
+                            }
+                        }
                         else
                             content = File.ReadAllText(file, enc);
                     }
@@ -459,7 +494,7 @@ namespace AppRestorer
         /// <summary>
         /// Skips the ctrl chars and high‑ASCII noise, then collapses the survivors into a string.
         /// </summary>
-        public static string ExtractUsableText(string path)
+        static string ExtractUsableText(string path)
         {
             try
             {
@@ -473,6 +508,41 @@ namespace AppRestorer
             catch (Exception) { return string.Empty; }
         }
 
+        /// <summary>
+        /// Helpful when dealing with ".lnk" UTF16LE shortcut files.
+        /// </summary>
+        static List<string> ExtractUtf16LeStrings(string filePath, int minChars = 4)
+        {
+            var results = new List<string>();
+            try
+            {
+                byte[] bytes = System.IO.File.ReadAllBytes(filePath);
+
+                int i = 0;
+                while (i < bytes.Length - 1)
+                {
+                    int start = i;
+                    int charCount = 0;
+                    // Look for sequences: printable ASCII (0x20–0x7E) followed by 0x00
+                    while (i < bytes.Length - 1 && bytes[i] >= 0x20 && bytes[i] <= 0x7E && bytes[i + 1] == 0x00)
+                    {
+                        charCount++;
+                        i += 2;
+                    }
+                    // Do we have enough?
+                    if (charCount >= minChars)
+                    {
+                        // Decode the slice as UTF-16LE
+                        int lengthBytes = charCount * 2;
+                        string s = Encoding.Unicode.GetString(bytes, start, lengthBytes);
+                        results.Add(s);
+                    }
+                    i += 2; // move past the last checked pair
+                }
+            }
+            catch (Exception) { /* Ignore */ }
+            return results;
+        }
 
         public static Encoding SniffEncoding(FileInfo file) => SniffEncoding(file.FullName);
         public static Encoding SniffEncoding(string filePath)
@@ -504,7 +574,7 @@ namespace AppRestorer
                     Debug.WriteLine($"  Enabled: {e.Enabled?.ToString() ?? "Unknown"}");
                     Debug.WriteLine($"  Command: {e.Command}");
                     Debug.WriteLine($"  Location: {e.Location}");
-                    Debug.WriteLine("———————————————————————————————————————————————————————————————————————————————————");
+                    Debug.WriteLine(new string('—',50));
             }
         }
 

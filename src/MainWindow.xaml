@@ -9,6 +9,7 @@
     Width="950"
     Height="450"
     Activated="Window_Activated"
+    Deactivated="Window_Deactivated"
     AllowsTransparency="True"
     Background="Transparent"
     Closing="Window_Closing"
@@ -56,21 +57,21 @@
                 <Button
                     x:Name="btnSpin"
                     Height="30"
-                    Margin="0,-2,2,0"
+                    Margin="-2,-2,2,0"
                     VerticalAlignment="Top"
                     Click="Spinner_Click"
                     Opacity="0.9"
                     Style="{StaticResource SpinButton}"
                     Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
                     <Button.Tag>
-                        <ImageSource>/Assets/Spinner6.png</ImageSource>
+                        <ImageSource>/Assets/Spinner5.png</ImageSource>
                     </Button.Tag>
                 </Button>
                 <TextBlock
                     x:Name="tbStatus"
                     MinHeight="30"
-                    Margin="15,4,5,0"
-                    FontSize="16"
+                    Margin="10,4,5,0"
+                    FontSize="18"
                     Foreground="{StaticResource TitleBrush}"
                     Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
             </StackPanel>

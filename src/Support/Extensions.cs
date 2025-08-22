@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 
 namespace AppRestorer
@@ -39,6 +43,25 @@ namespace AppRestorer
             }
         }
         #endregion
+
+        /// <summary>
+        /// Helper method for returning a collection of visual control types.
+        /// </summary>
+        public static IEnumerable<T> FindChildrenOfType<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T hit)
+                {
+                    yield return hit;
+                }
+                foreach (T? grandChild in FindChildrenOfType<T>(child))
+                {
+                    yield return grandChild;
+                }
+            }
+        }
 
         /// <summary>
         /// An updated string truncation helper.
@@ -227,6 +250,37 @@ namespace AppRestorer
         /// <param name="offset">The offset to apply to the date field</param>
         /// <returns>The corresponding DateTimeOffset</returns>
         public static DateTimeOffset ToOffset(this DateTime date, TimeSpan offset) => new DateTimeOffset(date).ToOffset(offset);
+
+        public static LinearGradientBrush CreateGradientBrush(Color c1, Color c2)
+        {
+            var gs1 = new GradientStop(c1, 0);
+            var gs3 = new GradientStop(c2, 1);
+            var gsc = new GradientStopCollection { gs1, gs3 };
+            var lgb = new LinearGradientBrush
+            {
+                ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation,
+                StartPoint = new System.Windows.Point(0, 0),
+                EndPoint = new System.Windows.Point(0, 1),
+                GradientStops = gsc
+            };
+            return lgb;
+        }
+
+        public static LinearGradientBrush CreateGradientBrush(Color c1, Color c2, Color c3)
+        {
+            var gs1 = new GradientStop(c1, 0);
+            var gs2 = new GradientStop(c2, 0.5);
+            var gs3 = new GradientStop(c3, 1);
+            var gsc = new GradientStopCollection { gs1, gs2, gs3 };
+            var lgb = new LinearGradientBrush
+            {
+                ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation,
+                StartPoint = new System.Windows.Point(0, 0),
+                EndPoint = new System.Windows.Point(0, 1),
+                GradientStops = gsc
+            };
+            return lgb;
+        }
 
         /// <summary>
         /// Generate a random brush
@@ -906,6 +960,139 @@ namespace AppRestorer
                 Debug.WriteLine($"[ERROR] ListAllAssemblies: {ex.Message}");
             }
             return results;
+        }
+
+        /// <summary>
+        /// Reflects the AssemblyInfo attributes
+        /// </summary>
+        public static string ReflectAssemblyFramework(this Type type)
+        {
+            try
+            {
+                System.Reflection.Assembly assembly = type.Assembly;
+                if (assembly != null)
+                {
+                    // Versioning
+                    var frameAttr = (TargetFrameworkAttribute)assembly.GetCustomAttributes(typeof(TargetFrameworkAttribute), false)[0];
+                    var targetAttr = (TargetPlatformAttribute)assembly.GetCustomAttributes(typeof(TargetPlatformAttribute), false)[0];
+                    var supportedAttr = (SupportedOSPlatformAttribute)assembly.GetCustomAttributes(typeof(SupportedOSPlatformAttribute), false)[0];
+                    // Reflection
+                    var compAttr = (AssemblyCompanyAttribute)assembly.GetCustomAttributes(typeof(AssemblyCompanyAttribute), false)[0];
+                    var confAttr = (AssemblyConfigurationAttribute)assembly.GetCustomAttributes(typeof(AssemblyConfigurationAttribute), false)[0];
+                    var fileVerAttr = (AssemblyFileVersionAttribute)assembly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), false)[0];
+                    var infoAttr = (AssemblyInformationalVersionAttribute)assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)[0];
+                    var nameAttr = (AssemblyProductAttribute)assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0];
+                    var titleAttr = (AssemblyTitleAttribute)assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute), false)[0];
+                    return string.Format("{0}  [{2}]  v{1}  {4}  –  {3}  ({5})", 
+                        nameAttr.Product, 
+                        fileVerAttr.Version, 
+                        string.IsNullOrEmpty(confAttr.Configuration) ? "N/A" : confAttr.Configuration, 
+                        string.IsNullOrEmpty(frameAttr.FrameworkDisplayName) ? frameAttr.FrameworkName : frameAttr.FrameworkDisplayName, 
+                        !string.IsNullOrEmpty(compAttr.Company) ? compAttr.Company : Environment.UserName, 
+                        System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                }
+            }
+            catch (Exception) { }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Reflects the assembly code base attribute (uses Location since CodeBase was deprecated).
+        /// </summary>
+        public static string ReflectAssemblyCodeBase(this Type type)
+        {
+            try
+            {
+                return type.Assembly?.Location ?? string.Empty;
+            }
+            catch (Exception) { return string.Empty; }
+        }
+
+        /// <summary>
+        /// Fetches the custom attribute <see cref="AssemblyConfigurationAttribute"/> as a string.
+        /// </summary>
+        public static string GetBuildConfig(this Type type)
+        {
+            try
+            {
+                AssemblyConfigurationAttribute? confAttr = type?.Assembly?.GetCustomAttributes(typeof(AssemblyConfigurationAttribute), false)[0] as AssemblyConfigurationAttribute;
+                if (confAttr != null)
+                    return $"{confAttr.Configuration}";
+            }
+            catch (Exception) { }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Fetches the <see cref="System.Runtime.InteropServices.RuntimeInformation"/> properties as a string.
+        /// </summary>
+        public static string GetRuntimeInfo()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{System.Runtime.InteropServices.RuntimeInformation.OSDescription} ({System.Runtime.InteropServices.RuntimeInformation.OSArchitecture})");
+            sb.Append("  –  ");
+            sb.Append($"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription} ({System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier})");
+            return $"{sb}";
+        }
+
+        /// <summary>
+        /// Helpful when dealing with ".lnk" UTF16LE shortcut files.
+        /// </summary>
+        public static List<string> ExtractAllStrings(string filePath, int minAsciiChars = 4, int minUtf16Chars = 4)
+        {
+            var results = new List<string>();
+            try
+            {
+                byte[] bytes = System.IO.File.ReadAllBytes(filePath);
+
+                #region [ASCII scan]
+                var asciiBuilder = new StringBuilder();
+                foreach (byte b in bytes)
+                {
+                    if (b >= 0x20 && b <= 0x7E) // printable ASCII
+                    {
+                        asciiBuilder.Append((char)b);
+                    }
+                    else
+                    {
+                        if (asciiBuilder.Length >= minAsciiChars)
+                            results.Add(asciiBuilder.ToString());
+                        asciiBuilder.Clear();
+                    }
+                }
+                if (asciiBuilder.Length >= minAsciiChars)
+                    results.Add(asciiBuilder.ToString());
+                #endregion
+
+                #region [UTF-16 Little Endian scan]
+                int i = 0;
+                while (i < bytes.Length - 1)
+                {
+                    int start = i;
+                    int charCount = 0;
+
+                    while (i < bytes.Length - 1 && bytes[i] >= 0x20 && bytes[i] <= 0x7E && bytes[i + 1] == 0x00)
+                    {
+                        charCount++;
+                        i += 2;
+                    }
+
+                    // Do we have enough?
+                    if (charCount >= minUtf16Chars)
+                    {
+                        // Decode the slice as UTF-16LE
+                        int lengthBytes = charCount * 2;
+                        string s = Encoding.Unicode.GetString(bytes, start, lengthBytes);
+                        results.Add(s);
+                    }
+
+                    i += 2;
+                }
+                #endregion
+
+                return results.Distinct().ToList();
+            }
+            catch (Exception) { return results; }
         }
     }
 }

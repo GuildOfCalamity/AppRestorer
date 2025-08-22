@@ -27,7 +27,7 @@ namespace AppRestorer
             var val = (bool)value;
             if (parameter is string param && (param.ToString().Equals("inverse", StringComparison.OrdinalIgnoreCase) || param.ToString().Equals("reverse", StringComparison.OrdinalIgnoreCase) || param.ToString().Equals("opposite", StringComparison.OrdinalIgnoreCase)))
                 val = !val;
-            return val ? Visibility.Visible : Visibility.Collapsed;
+            return val ? Visibility.Visible : Visibility.Hidden;
         }
 
         public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -44,9 +44,9 @@ namespace AppRestorer
             {
                 bool enabled = (bool)value;
                 if (enabled)
-                    return new BitmapImage(App.FavEnabled);
+                    return new BitmapImage(Constants.FavEnabled);
                 else
-                    return new BitmapImage(App.FavDisabled);
+                    return new BitmapImage(Constants.FavDisabled);
             }
             catch (Exception ex)
             {
