@@ -76,6 +76,11 @@ namespace AppRestorer
                 {
                     var finalists = PreserveFavoritesWithMerge(_appList, _vm?.CollectRunningApps());
                     _vm?.SaveExistingApps(finalists);
+                    if (finalists?.Count != _appList?.Count)
+                    {
+                        AppList.ItemsSource = null;
+                        AppList.ItemsSource = finalists;
+                    }
                 }
                 else
                 {
@@ -426,6 +431,8 @@ namespace AppRestorer
             var missingFavorites = sourceList
                 .Where(s => s.Favorite && !existingLocations.Contains(s.Location))
                 .ToList();
+
+            //var missingNonFavorites = result?.Where(s => !string.IsNullOrEmpty(s.Location) && !missingFavorites.Contains(s)).ToList();
 
             result?.AddRange(missingFavorites);
 

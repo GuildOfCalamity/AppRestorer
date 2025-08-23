@@ -220,9 +220,9 @@ namespace AppRestorer
             catch (Exception) { /* Ignore */ }
         }
 
-        public void SaveExistingApps(List<RestoreItem> appList)
+        public void SaveExistingApps(List<RestoreItem>? appList)
         {
-            if (appList.Count == 0)
+            if (appList == null || appList.Count == 0)
                 return;
 
             try

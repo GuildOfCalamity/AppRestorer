@@ -9,10 +9,10 @@
     Width="950"
     Height="450"
     Activated="Window_Activated"
-    Deactivated="Window_Deactivated"
     AllowsTransparency="True"
     Background="Transparent"
     Closing="Window_Closing"
+    Deactivated="Window_Deactivated"
     FontFamily="Aptos"
     Icon="/AppRestorer;component/AppIcon.ico"
     Loaded="Window_Loaded"
@@ -91,8 +91,8 @@
                     MinHeight="260"
                     MaxHeight="260"
                     Margin="0"
-                    BorderThickness="0"
-                    Style="{StaticResource listBoxBackground}">
+                    Background="Transparent"
+                    BorderThickness="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type local:RestoreItem}">
                             <Border

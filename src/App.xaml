@@ -777,7 +777,7 @@
                     </Setter.Value>
                 </Setter>
                 <!--  You may need to adjust the TransformOrigin values based on the image dimensions.  -->
-                <Setter Property="RenderTransformOrigin" Value="0.5, 0.5" />
+                <Setter Property="RenderTransformOrigin" Value="0.5, 0.53" />
                 <Setter Property="RenderTransform">
                     <Setter.Value>
                         <RotateTransform />
