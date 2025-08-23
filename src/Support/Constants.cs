@@ -4,14 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AppRestorer
+namespace AppRestorer;
+
+public class Constants
 {
-    public class Constants
-    {
-        public static Uri FavEnabled = new Uri(@"Assets\FavoriteIcon9.png", UriKind.Relative);
-        public static Uri FavDisabled = new Uri(@"Assets\FavoriteIcon10.png", UriKind.Relative);
-        
-        // EventBus
-        public static string EB_Notice = "Notice_Event";
-    }
+    public static Uri FavEnabled = new Uri(@"Assets\FavoriteIcon9.png", UriKind.Relative);
+    public static Uri FavDisabled = new Uri(@"Assets\FavoriteIcon10.png", UriKind.Relative);
+    
+    // EventBus
+    public static string EB_Notice = "Notice_Event";
 }

@@ -9,6 +9,20 @@
     <Application.Resources>
         <ResourceDictionary>
 
+            <!--#region [TrackRing Spinner]-->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Controls/TrackRing.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <LinearGradientBrush x:Key="DotsBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#FFFFFF" />
+                        <GradientStop Offset="1.0" Color="#202020" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+            <!--#endregion-->
+
             <!--#region [Converters]-->
             <local:BoolToVisibilityConverter x:Key="boolToVisibility" />
             <local:BoolToReverseConverter x:Key="boolToReverse" />
@@ -816,8 +830,7 @@
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
-
-            <!--#endregion [Animated Button using Image]-->
+            <!--#endregion-->
 
 
         </ResourceDictionary>
