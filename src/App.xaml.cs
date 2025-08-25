@@ -18,9 +18,8 @@ public partial class App : Application
     {
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
         AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
-        
         //Debug.WriteLine($"[INFO] AppDomainFullTrust: {AppDomain.CurrentDomain.IsFullyTrusted}");
-        
+
         RuntimeInfo = $"{Extensions.GetRuntimeInfo()}";
         BuildConfig = $"{typeof(App).GetBuildConfig()}";
         AssemblyInfo = $"{typeof(App).ReflectAssemblyFramework()}";
@@ -40,9 +39,9 @@ public partial class App : Application
     #endregion
 
     #region [Public Methods]
-    public static bool ShowMessage(string message, string title = "Notice", Window? owner = null)
+    public static bool ShowMessage(string message, string title = "Notice", string yes = "Yes", string no = "No", Window? owner = null)
     {
-        var msgBox = new MessageBoxWindow(message, title);
+        var msgBox = new MessageBoxWindow(message, title, yes, no);
         if (owner != null) 
         { 
             msgBox.Owner = owner;

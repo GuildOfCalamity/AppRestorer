@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     bool _firstRun;
     double _interval;
     DateTime _lastUse;
+    string? _voiceName;
     MainViewModel? _vm;
     LinearGradientBrush _lvl0 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(120, 120, 120));
     LinearGradientBrush _lvl1 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(0, 181, 255));
@@ -64,6 +65,7 @@ public partial class MainWindow : Window
         _firstRun = ConfigManager.Get("FirstRun", defaultValue: true);
         _interval = ConfigManager.Get("PollIntervalInMinutes", defaultValue: 60d);
         _lastUse = ConfigManager.Get("LastUse", defaultValue: DateTime.Now);
+        _voiceName = ConfigManager.Get("VoiceName", defaultValue: "Hortense");
         #endregion
 
         #region [Timer for recording apps]
@@ -75,7 +77,7 @@ public partial class MainWindow : Window
             if (_appList?.Count > 0)
             {
                 var finalists = PreserveFavoritesWithMerge(_appList, _vm?.CollectRunningApps());
-                _vm?.SaveExistingApps(finalists);
+                // If there's a difference then update the ItemsSource and save.
                 if (finalists?.Count != _appList?.Count)
                 {
                     AppList.ItemsSource = null;
@@ -87,7 +89,6 @@ public partial class MainWindow : Window
             {
                 _vm?.SaveRunningApps();
             }
-
             UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
         };
         _timer.Start();
@@ -109,7 +110,7 @@ public partial class MainWindow : Window
             UpdateText(tbStatus, $"Please select apps to restore");
             return;
         }
-        bool answer = App.ShowMessage($"Do you wish to restore {enabled} {(enabled == 1 ? "app?" : "apps?")}", "Confirm", this);
+        bool answer = App.ShowMessage($"Do you wish to restore {enabled} {(enabled == 1 ? "app?" : "apps?")}", "Confirm", owner: this);
         if (!answer)
         {
             UpdateText(tbStatus, $"User canceled restore at {DateTime.Now.ToLongTimeString()}");
@@ -173,14 +174,14 @@ public partial class MainWindow : Window
 
     void Window_Activated(object sender, EventArgs e)
     {
-        // Check for recent backup
-        if (!System.IO.File.Exists($"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak"))
-            ButtonBackup.IsEnabled = false;
-        else
+        // Check for recent backup (up to two weeks old)
+        int trys = 0;
+        var prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
+        while (!System.IO.File.Exists(prevFile) && ++trys < 15) { prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1 * trys):yyyyMMdd}.bak"; }
+        if (System.IO.File.Exists($"{prevFile}"))
             ButtonBackup.IsEnabled = true;
-
-        //if (this.WindowState == WindowState.Normal && btnSpin.Visibility == Visibility.Hidden)
-        //    btnSpin.Visibility = Visibility.Visible;
+        else
+            ButtonBackup.IsEnabled = false;
 
         // EventBus demonstration
         App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Activated: {this.WindowState}");
@@ -192,11 +193,21 @@ public partial class MainWindow : Window
         App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Deactivated: {this.WindowState}");
     }
 
-
     void Window_Loaded(object sender, RoutedEventArgs e)
     {
         //_vm!.IsBusy = true;
         UpdateText(tbStatus, $"Loading…");
+
+        if (_firstRun)
+        {
+            AnnounceMessage("Welcome to App Restorer.");
+            var location = this.GetType().Assembly?.Location;
+            if (!string.IsNullOrEmpty(location) && StartupAnalyzer.CreateDesktopShortcut("AppRestorer.lnk", location.Replace(".dll", ".exe")))
+                AnnounceMessage("I have created a desktop shortcut for you.");
+        }
+        else
+            AnnounceMessage("Loading App Restorer");
+
 
         if (_appList == null)
             InitAndLoadApps();
@@ -249,6 +260,7 @@ public partial class MainWindow : Window
         ConfigManager.Set("FirstRun", value: false);
         ConfigManager.Set("PollIntervalInMinutes", value: _interval);
         ConfigManager.Set("LastUse", value: DateTime.Now);
+        ConfigManager.Set("VoiceName", value: _voiceName ?? "Hortense");
         if (_appList?.Count > 0)
             _vm?.SaveExistingApps(_appList);
         else
@@ -276,7 +288,7 @@ public partial class MainWindow : Window
 
     void LoadBackup_Click(object sender, RoutedEventArgs e)
     {
-        bool answer = App.ShowMessage($"Are you sure?", "Load Backup", this);
+        bool answer = App.ShowMessage($"Are you sure?", "Load Backup", owner: this);
         if (answer)
         {
             int count = 0;
@@ -288,8 +300,11 @@ public partial class MainWindow : Window
             try
             {
                 _appList = _vm?.LoadSavedApps(prevFile).OrderBy(o => o.Location).ToList();
-                AppList.ItemsSource = null;
-                AppList.ItemsSource = _appList;
+                if (_appList != null && _appList.Count > 0)
+                {
+                    AppList.ItemsSource = null;
+                    AppList.ItemsSource = _appList;
+                }
             }
             catch (Exception) 
             { 
@@ -511,6 +526,177 @@ public partial class MainWindow : Window
     #endregion
 
     #region [Superfluous]
+    void AnnounceMessage(string message)
+    {
+        try
+        {
+            var voice = (ISpVoice)new SpVoice();
+            voice.Rate = 0;     // -10 (slow) to +10 (fast)
+            voice.Volume = 80;  // 0 to 100
+            if (voice.SetVoiceByName(_voiceName ?? "Hazel"))
+                voice.Speak(message, SpeechVoiceSpeakFlags.SVSFDefault);
+            else
+                voice.Speak(message, SpeechVoiceSpeakFlags.SVSFDefault);
+
+            // If using SVSFlagsAsync, or create voice as global object so GC won't occur.
+            //voice.WaitUntilDone(2000);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// SAPI still works in Win10/11
+    /// </summary>
+    /// <param name="window">For displaying the old SAPI settings window - may or may not work on your system.</param>
+    void RunVoiceTests(Window? window)
+    {
+        #region [using dynamic]
+        try
+        {
+            const int SVSFlagsAsync = 1;        // speak asynchronously
+            const int SVSFPurgeBeforeSpeak = 2; // clear the queue before speaking
+            const int SVSFIsFilename = 4;       // treat the text as a filename to read
+            const int SVSFIsXML = 8;            // treat the text as XML markup
+            const int SVSFPersistXML = 16;      // persist XML state changes across calls
+
+            Type? comType = Type.GetTypeFromProgID("SAPI.SpVoice");
+            if (comType != null)
+            {
+                dynamic? voice1 = Activator.CreateInstance(comType);
+                if (voice1 != null)
+                {
+                    // Change voice 
+                    voice1.Voice = voice1.GetVoices().Item(1);
+
+                    // Change rate and volume
+                    voice1.Rate = 1;     // Slightly faster
+                    voice1.Volume = 70;  // 70% volume
+
+                    voice1.Speak("Loading App Restorer", SVSFlagsAsync);
+
+                    // List available voices
+                    foreach (var token in voice1.GetVoices())
+                    {
+                        Debug.WriteLine($"[VOICE] {token.GetDescription()}");
+                        /*
+                        Microsoft David Desktop - English (United States)
+                        Microsoft Hazel Desktop - English (Great Britain)
+                        Microsoft Hedda Desktop - German
+                        Microsoft Zira Desktop - English (United States)
+                        Microsoft Hortense Desktop - French
+                        Microsoft Elsa Desktop - Italian (Italy)
+                        Microsoft Haruka Desktop - Japanese
+                        Microsoft Heami Desktop - Korean
+                        Microsoft Maria Desktop - Portuguese(Brazil)
+                        Microsoft Huihui Desktop - Chinese (Simplified)
+                        */
+                    }
+
+
+                    // Use a different voice
+                    //voice.Voice = voice.GetVoices().Item(1);
+                    //voice.Speak("This is a different voice.");
+
+                }
+            }
+
+            
+            //dynamic? wmplayer = Activator.CreateInstance(Type.GetTypeFromProgID("WMPlayer.OCX"));
+            //wmplayer.URL = @"D:\Audio\Sound.mp3";
+            //wmplayer.Controls.play();
+
+
+            //dynamic? excel = Activator.CreateInstance(Type.GetTypeFromProgID("Excel.Application"));
+            //if (excel != null)
+            //{
+            //    excel.Visible = true;
+            //    dynamic? wb = excel.Workbooks.Add();
+            //    dynamic? ws = wb.Sheets[1];
+            //    ws.Cells[1, 1].Value = "Hello from App Restorer";
+            //}
+
+        }
+        catch { }
+        #endregion
+
+        #region [using wrapper]
+        var voice = (ISpVoice)new SpVoice();
+
+        // Synchronous speech
+        voice.Speak("Hello world!", SpeechVoiceSpeakFlags.SVSFDefault);
+
+        // Asynchronous speech
+        voice.Speak("Speaking asynchronously...", SpeechVoiceSpeakFlags.SVSFlagsAsync);
+
+        // Change rate and volume
+        voice.Rate = 1;    // -10 (slow) to +10 (fast)
+        voice.Volume = 70; // 0 to 100
+
+        //voice.Pause();
+        //Thread.Sleep(1000);
+        //voice.Resume();
+
+        // Wait until done (helpful when using SVSFlagsAsync)
+        voice.WaitUntilDone(2000);
+
+        if (voice.SetVoiceByName("Hazel"))
+            voice.Speak("Hello, this is Microsoft Hazel.", SpeechVoiceSpeakFlags.SVSFDefault);
+        else
+            voice.Speak("Requested voice not found.", SpeechVoiceSpeakFlags.SVSFDefault);
+
+        if (window != null)
+        {
+            // [Common SpVoice.DisplayUI Values]
+            //-------------------------------------------------------------------
+            // "AudioProperties"  - Shows audio format/properties dialog.
+            // "AudioOutput"      - Lets the user choose the audio output device.
+            // "VoiceProperties"  - Lets the user choose and configure the voice.
+            // "EngineProperties" - Engine specific settings dialog.
+            string uiName = "VoiceProperties";
+            object? extraData = null;
+            if (voice.IsUISupported(uiName, ref extraData))
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+                voice.DisplayUI(hwnd, "Select Audio Output", uiName, ref extraData);
+            }
+            else
+            {
+                App.ShowMessage($"{uiName} UI not supported by this voice engine.", "Warning", "OK", "Cancel", owner: window);
+            }
+        }
+        #endregion
+    }
+
+    /// <summary>
+    /// dlgType 0 = [OK] <br/>
+    /// dlgType 1 = [OK] [Cancel] <br/>
+    /// dlgType 2 = [Abort] [Retry] [Cancel] <br/>
+    /// dlgType 3 = [Yes] [No] [Cancel] <br/>
+    /// dlgType 4 = [Yes] [No] <br/>
+    /// dlgType 5 = [Retry] [Cancel] <br/>
+    /// dlgType 6 = [Cancel] [Try Again] [Continue] <br/>
+    /// </summary>
+    void ShowOldPopup(string message, int dlgType = 1)
+    {
+        // late-bind to the Windows Script Host COM automation object
+        var comObj = Type.GetTypeFromProgID("WScript.Shell");
+        if (comObj == null) { return; }
+        dynamic? shell = Activator.CreateInstance(comObj);
+
+        // Arguments: message, timeout(sec), title, type
+        var rez = shell?.Popup(message, 3, "Notice", dlgType);
+        if (rez != null)
+        {
+            if ((int)rez == 1)
+                Debug.WriteLine($"Button 1 pressed");
+            else if ((int)rez == 2)
+                Debug.WriteLine($"Button 2 pressed");
+        }
+        // Cleanup
+        if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
+    }
+
     static async void RunTimedTaskTests()
     {
         #region [Without a return value]

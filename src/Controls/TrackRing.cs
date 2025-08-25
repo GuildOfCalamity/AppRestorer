@@ -126,10 +126,10 @@ public class TemplateSettingValues : DependencyObject
         if (width <= 0.1)
             width = 1.0;
 
-        if (width <= 40)
-            EllipseDiameter = width / 10 + 1;
+        if (width <= 40D)
+            EllipseDiameter = width / 9D + 1D;
         else
-            EllipseDiameter = width / 10;
+            EllipseDiameter = width / 9D;
 
         MaxSideLength = width - EllipseDiameter;
         EllipseOffset = new Thickness(0, EllipseDiameter * 2.0, 0, 0);

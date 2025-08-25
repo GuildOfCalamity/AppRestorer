@@ -27,6 +27,18 @@ public sealed class StartupEntry
 public static class StartupAnalyzer
 {
     /// <summary>
+    /// Startup extensions
+    /// </summary>
+    static readonly HashSet<string> StartupFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".lnk",
+        ".exe",
+        ".bat",
+        ".cmd",
+        ".ps1"
+    };
+
+    /// <summary>
     /// Main method
     /// </summary>
     /// <returns><see cref="List{T}"/></returns>
@@ -129,18 +141,6 @@ public static class StartupAnalyzer
         }
     }
 
-    /// <summary>
-    /// Startup extensions
-    /// </summary>
-    static readonly HashSet<string> StartupFileExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".lnk", 
-        ".exe", 
-        ".bat", 
-        ".cmd", 
-        ".ps1"
-    };
-
     static void CollectStartupFolder(string folderPath, string scope, RegistryHive hiveForApproval, List<StartupEntry> results)
     {
         try
@@ -186,6 +186,7 @@ public static class StartupAnalyzer
     {
         try
         {
+            // late-bind to the Windows Script Host COM automation object
             var shellType = Type.GetTypeFromProgID("WScript.Shell");
             if (shellType == null)
                 return shortcutPath;
@@ -210,6 +211,39 @@ public static class StartupAnalyzer
             // Fall back to returning the .lnk path
         }
         return shortcutPath;
+    }
+
+    /// <summary>
+    /// Creates a shortcut on the Windows Desktop
+    /// </summary>
+    public static bool CreateDesktopShortcut(string shortcutName = "App.lnk", string targetPath = @"C:\Path\To\App.exe", string description = "Launch App", string arguments = "")
+    {
+        try
+        {
+            // late-bind to the Windows Script Host COM automation object
+            var comObj = Type.GetTypeFromProgID("WScript.Shell");
+            if (comObj == null) { return false; }
+            dynamic? shell = Activator.CreateInstance(comObj);
+            string? desktopPath = shell?.SpecialFolders("Desktop");
+            if (string.IsNullOrWhiteSpace(desktopPath))
+                return false;
+            dynamic? shortcut = shell?.CreateShortcut(Path.Combine(desktopPath, shortcutName));
+            if (shortcut == null)
+                return false;
+            shortcut.TargetPath = $"\"{targetPath}\"";
+            shortcut.WorkingDirectory = $"\"{System.IO.Directory.GetParent(targetPath)}\"";
+            shortcut.Description = description;
+            shortcut.Arguments = arguments;
+            shortcut.IconLocation = $"{targetPath},0";
+            shortcut.Save();
+            // Cleanup
+            if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
+
+            return true;
+        }
+        catch { }
+        return false;
     }
 
     static string TryResolveShortcutReturnEmptyIfFails(string shortcutPath)
