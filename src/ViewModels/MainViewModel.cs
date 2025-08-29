@@ -179,7 +179,7 @@ public class MainViewModel : INotifyPropertyChanged
                 {
                     // Self, duplicate, and registry startup checks
                     if (!runningApps.Any(ri => ri.Location.Contains(proc.MainModule.FileName)) &&
-                        !proc.MainModule.FileName.EndsWith(App.GetSelfName(), StringComparison.OrdinalIgnoreCase) &&
+                        !proc.MainModule.FileName.EndsWith(App.GetCurrentAssemblyNameWithExtension(), StringComparison.OrdinalIgnoreCase) &&
                         !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
                     {
                         if (_deepDive)

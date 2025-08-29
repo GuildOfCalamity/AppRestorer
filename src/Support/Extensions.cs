@@ -11,7 +11,9 @@ using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace AppRestorer;
 
@@ -20,7 +22,7 @@ public static class Extensions
     #region [Logger with automatic duplicate checking]
     static HashSet<string> _logCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     static DateTime _logCacheUpdated = DateTime.Now;
-    static int _repeatAllowedSeconds = 5;
+    static int _repeatAllowedSeconds = 15;
     public static void WriteToLog(this string message, string fileName = "AppLog.txt")
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -39,7 +41,7 @@ public static class Extensions
             if (diff.Seconds > _repeatAllowedSeconds)
                 _logCache.Clear();
             else
-                Debug.WriteLine($"[LOGGING] Duplicate not allowed: {diff.Seconds}secs < {_repeatAllowedSeconds}secs");
+                Debug.WriteLine($"[WARNING] Duplicate not allowed: {diff.Seconds}secs < {_repeatAllowedSeconds}secs");
         }
     }
     #endregion
@@ -187,12 +189,22 @@ public static class Extensions
         return (target, DescribeFutureTime(delta, now, culture));
     }
 
+    /// <summary>
+    ///   <code>
+    ///     Extensions.DescribeDayAndTime(new DateTimeOffset(DateTime.Now.AddHours(1)), CultureInfo.CurrentCulture);
+    ///   </code>
+    /// </summary>
+    /// <returns>"today at 9:00 AM"</returns>
+    public static string DescribeDayAndTime(DateTimeOffset target, CultureInfo culture)
+    {
+        return DescribeDayAndTime(DateTimeOffset.Now, target, culture);
+    }
+
     static string DescribeDayAndTime(DateTimeOffset now, DateTimeOffset target, CultureInfo culture)
     {
-        var today = now.Date;
-        var tDate = target.Date;
-
-        string dayPart;
+        DateTime today = now.Date;
+        DateTime tDate = target.Date;
+        string dayPart = string.Empty;
 
         if (tDate == today)
             dayPart = "today";
@@ -236,9 +248,7 @@ public static class Extensions
         delta -= TimeSpan.FromMinutes((long)delta.TotalMinutes);
 
         if (components < 2)
-        {
             add("sec", (long)Math.Round(delta.TotalSeconds));
-        }
 
         return $"in {sb}";
     }
@@ -407,12 +417,248 @@ public static class Extensions
     }
 
     /// <summary>
+    /// Example of <see cref="UIElement"/> traversal.
+    /// </summary>
+    public static void IterateAllUIElements(DockPanel dock)
+    {
+        UIElementCollection uic = dock.Children;
+
+        foreach (Grid uie in uic)
+            uie.Background = new SolidColorBrush(Colors.Green);
+
+        foreach (Border uie in uic)
+            uie.Background = new SolidColorBrush(Colors.Orange);
+
+        foreach (StackPanel uie in uic)
+            uie.Background = new SolidColorBrush(Colors.Blue);
+
+        foreach (Button uie in uic)
+        {
+            uie.Background = new SolidColorBrush(Colors.Yellow);
+
+            // Example of restoring default properties
+            var locallySetProperties = uie.GetLocalValueEnumerator();
+            while (locallySetProperties.MoveNext())
+            {
+                DependencyProperty propertyToClear = locallySetProperties.Current.Property;
+                if (!propertyToClear.ReadOnly)
+                    uie.ClearValue(propertyToClear);
+            }
+        }
+    }
+
+    /// <summary>
+    /// FindVisualChild element in a control group.
+    /// <code>
+    ///   /* Getting the ContentPresenter of myListBoxItem */
+    ///   var myContentPresenter = FindVisualChild<ContentPresenter>(myListBoxItem);
+    ///   
+    ///   /* Getting the currently selected ListBoxItem. Note that the ListBox must have IsSynchronizedWithCurrentItem set to True for this to work */
+    ///   var myListBoxItem = (ListBoxItem)(myListBox.ItemContainerGenerator.ContainerFromItem(myListBox.Items.CurrentItem));
+    ///   
+    ///   /* Finding textBlock from the DataTemplate that is set on that ContentPresenter */
+    ///   var myDataTemplate = myContentPresenter.ContentTemplate;
+    ///   var myTextBlock = (TextBlock)myDataTemplate.FindName("textBlock", myContentPresenter);
+    ///
+    ///   /* Do something to the DataTemplate-generated TextBlock */
+    ///   MessageBox.Show($"The text of the TextBlock of the selected list item: {myTextBlock.Text}");
+    /// </code>
+    /// </summary>
+    public static TChildItem? FindVisualChild<TChildItem>(DependencyObject obj) where TChildItem : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+        {
+            var child = VisualTreeHelper.GetChild(obj, i);
+            if (child is TChildItem)
+                return (TChildItem)child;
+            var childOfChild = FindVisualChild<TChildItem>(child);
+            if (childOfChild != null)
+                return childOfChild;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Find & return a WPF control based on its resource key name.
+    /// </summary>
+    public static T? FindControl<T>(this FrameworkElement control, string resourceKey) where T : FrameworkElement
+    {
+        return (T?)control.FindResource(resourceKey);
+    }
+
+    /// <summary>
+    /// <code>
+    ///   IEnumerable<DependencyObject> cntrls = this.FindUIElements();
+    /// </code>
+    /// If you're struggling to get this working and finding that your Window (for instance)
+    /// has zero visual children, try running this method in the "_Loaded" event handler. 
+    /// If you call this from a constructor (even after InitializeComponent), the visual 
+    /// children won't be added to the VisualTree yet and it won't work properly.
+    /// </summary>
+    /// <param name="parent">some parent control like <see cref="System.Windows.Window"/></param>
+    /// <returns>list of <see cref="IEnumerable{DependencyObject}"/></returns>
+    public static IEnumerable<DependencyObject> FindUIElements(this DependencyObject parent)
+    {
+        if (parent == null)
+            yield break;
+
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            DependencyObject o = VisualTreeHelper.GetChild(parent, i);
+            foreach (DependencyObject obj in FindUIElements(o))
+            {
+                if (obj == null)
+                    continue;
+                if (obj is UIElement ret)
+                    yield return ret;
+            }
+        }
+        yield return parent;
+    }
+
+    /// <summary>
+    /// Should be called on UI thread only.
+    /// </summary>
+    public static void HideAllVisualChildren<T>(this UIElementCollection coll) where T : UIElementCollection
+    {
+        // Casting the UIElementCollection into List
+        List<FrameworkElement> lstElement = coll.Cast<FrameworkElement>().ToList();
+        var lstControl = lstElement.OfType<Control>();
+        foreach (Control control in lstControl)
+        {
+            if (control == null)
+                continue;
+            control.Visibility = System.Windows.Visibility.Hidden;
+        }
+    }
+
+    public static IEnumerable<Control> GetAllControls<T>(this UIElementCollection coll) where T : UIElementCollection
+    {
+        // Casting the UIElementCollection into List
+        List<FrameworkElement> lstElement = coll.Cast<FrameworkElement>().ToList();
+        var lstControl = lstElement.OfType<Control>();
+        foreach (Control control in lstControl)
+        {
+            if (control == null)
+                continue;
+            yield return control;
+        }
+    }
+
+    /// <summary>
+    /// Image helper method
+    /// </summary>
+    /// <param name="UriPath"></param>
+    /// <returns><see cref="BitmapFrame"/></returns>
+    public static BitmapFrame? GetBitmapFrame(string UriPath)
+    {
+        try
+        {
+            IconBitmapDecoder ibd = new IconBitmapDecoder(new Uri(UriPath, UriKind.RelativeOrAbsolute), BitmapCreateOptions.None, BitmapCacheOption.Default);
+            return ibd.Frames[0];
+        }
+        catch (System.IO.FileFormatException fex)
+        {
+            Debug.WriteLine($"[ERROR] GetBitmapFrame: {fex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// <see cref="System.Windows.Media.Imaging.BitmapImage"/> helper method.
+    /// </summary>
+    /// <param name="uriPath">the pack uri path to the image</param>
+    /// <returns><see cref="System.Windows.Media.Imaging.BitmapImage"/></returns>
+    /// <remarks>
+    /// URI Packing can assume the following formats:
+    /// 1) Content File...
+    ///    "pack://application:,,,/Assets/logo.png"
+    ///    https://learn.microsoft.com/en-us/dotnet/desktop/wpf/app-development/pack-uris-in-wpf?view=netframeworkdesktop-4.8#content-file-pack-uris
+    /// 2) Referenced Assembly Resource...
+    ///    "pack://application:,,,/AssemblyNameHere;component/Resources/logo.png"
+    ///    https://learn.microsoft.com/en-us/dotnet/desktop/wpf/app-development/pack-uris-in-wpf?view=netframeworkdesktop-4.8#referenced-assembly-resource-file
+    /// 3) Site Of Origin...
+    ///    "pack://siteoforigin:,,,/Assets/SiteOfOriginFile.xaml"
+    ///    https://learn.microsoft.com/en-us/dotnet/desktop/wpf/app-development/pack-uris-in-wpf?view=netframeworkdesktop-4.8#site-of-origin-pack-uris
+    /// </remarks>
+    public static System.Windows.Media.Imaging.BitmapImage? ReturnImageSource(string uriPath)
+    {
+        if (string.IsNullOrWhiteSpace(uriPath))
+            return null;
+
+        try
+        {
+            var holder = new System.Windows.Media.Imaging.BitmapImage();
+            holder.BeginInit();
+            holder.UriSource = new Uri(uriPath); //new Uri("pack://application:,,,/AssemblyName;component/Resources/logo.png");
+            holder.EndInit();
+            return holder;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ERROR] ReturnImageSource: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Attempts to retrieve a resource of type T from Application resources.
+    /// Returns null if not found or of wrong type.
+    /// </summary>
+    public static T? TryGetResource<T>(object key) where T : class
+    {
+        /* [EXAMPLE USAGE]
+         Style? myStyle = Extensions.TryGetResource<Style>("ExampleButtonStyle");
+         if (myStyle != null)
+         {
+             button.Style = myStyle;
+         }
+        */
+        if (Application.Current == null || key == null)
+            return null;
+
+        var resource = Application.Current.TryFindResource(key);
+        return resource as T;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve a resource of type T from a given ResourceDictionary.
+    /// Returns null if not found or of wrong type.
+    /// </summary>
+    public static T? TryGetFromDictionary<T>(ResourceDictionary dictionary, object key) where T : class
+    {
+        /* [EXAMPLE USAGE]
+         var dict = new ResourceDictionary { Source = new Uri("pack://application:,,,/ExtraTheme.xaml") };
+         Brush? bkgrndBrush = Extensions.TryGetFromDictionary<Brush>(dict, "SettingsBackground");
+         if (bkgrndBrush != null)
+         {
+             panel.Background = backgroundBrush;
+         }
+        */
+        if (dictionary == null || key == null)
+            return null;
+
+        if (dictionary.Contains(key))
+            return dictionary[key] as T;
+
+        // Search merged dictionaries recursively
+        foreach (var merged in dictionary.MergedDictionaries)
+        {
+            var found = TryGetFromDictionary<T>(merged, key);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Convert a <see cref="DateTime"/> object into an ISO 8601 formatted string.
     /// </summary>
     /// <param name="dateTime"><see cref="DateTime"/></param>
     /// <returns>ISO 8601 formatted string</returns>
     /// <remarks>You can also use <c>DateTime.UtcNow.ToString("o")</c></remarks>
-    public static string ToJsonFriendlyFormat(this DateTime dateTime) => dateTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
+    public static string ToJsonFormat(this DateTime dateTime) => dateTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
     /// <summary>
     /// Converts a JSON date time format string "yyyy-MM-ddTHH:mm:ssZ" into a DateTime object.

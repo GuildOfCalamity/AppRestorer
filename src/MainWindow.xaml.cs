@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     List<RestoreItem>? _appList;
     DispatcherTimer? _timer;
     bool _firstRun;
+    bool _dialogWatcher;
     double _interval;
     DateTime _lastUse;
     string? _voiceName;
@@ -34,6 +36,8 @@ public partial class MainWindow : Window
     LinearGradientBrush _lvl3 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 106, 0));
     LinearGradientBrush _lvl4 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 0, 0));
     #endregion
+
+    ExplorerDialogCloser? _closer;
 
     public MainWindow()
     {
@@ -61,11 +65,13 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK, 
                 MessageBoxImage.Warning);
         };
-
         _firstRun = ConfigManager.Get("FirstRun", defaultValue: true);
-        _interval = ConfigManager.Get("PollIntervalInMinutes", defaultValue: 60d);
+        _interval = ConfigManager.Get("PollIntervalInMinutes", defaultValue: 60D);
         _lastUse = ConfigManager.Get("LastUse", defaultValue: DateTime.Now);
         _voiceName = ConfigManager.Get("VoiceName", defaultValue: "Hortense");
+        _dialogWatcher = ConfigManager.Get("DialogWatcher", defaultValue: false);
+        if (_dialogWatcher)
+            _closer = new ExplorerDialogCloser();
         #endregion
 
         #region [Timer for recording apps]
@@ -73,6 +79,7 @@ public partial class MainWindow : Window
         _timer.Interval = TimeSpan.FromMinutes(_interval);
         _timer.Tick += (s, ev) =>
         {
+            UpdateText(tbStatus, $"Scanning…");
             _vm?.BackupAppFile(false);
             if (_appList?.Count > 0)
             {
@@ -96,6 +103,110 @@ public partial class MainWindow : Window
     }
 
     #region [Events]
+    void Window_Activated(object sender, EventArgs e)
+    {
+        // Check for recent backup (up to two weeks old)
+        int trys = 0;
+        var prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
+        while (!System.IO.File.Exists(prevFile) && ++trys < 15) { prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1 * trys):yyyyMMdd}.bak"; }
+        if (System.IO.File.Exists($"{prevFile}"))
+            ButtonBackup.IsEnabled = true;
+        else
+            ButtonBackup.IsEnabled = false;
+
+        // EventBus demonstration
+        App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Activated: {this.WindowState}");
+    }
+
+    void Window_Deactivated(object sender, EventArgs e)
+    {
+        // EventBus demonstration
+        App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Deactivated: {this.WindowState}");
+    }
+
+    void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        //_vm!.IsBusy = true;
+
+        //App.ShowDialog($"{Environment.NewLine}Initializing…", "Notice",
+        //    autoFocus: false,
+        //    autoClose: TimeSpan.FromSeconds(3),
+        //    assetName: "AlertIcon2.png", assetOpacity: 0.3,
+        //    owner: null);
+
+        UpdateText(tbStatus, $"Loading…");
+
+        if (_firstRun)
+        {
+            AnnounceMessage("Welcome to App Restorer.");
+            if (StartupAnalyzer.CreateDesktopShortcut("AppRestorer.lnk", App.GetCurrentLocation()))
+                AnnounceMessage("I have created a desktop shortcut for you.");
+        }
+        else
+            AnnounceMessage("Loading App Restorer");
+
+
+        if (_appList == null)
+            InitAndLoadApps();
+
+        if (_appList?.Count == 0)
+        {
+            _vm?.SaveRunningApps();
+            InitAndLoadApps();
+        }
+
+        UpdateText(tbStatus, $"Select any of the {_appList?.Count} apps to restore…");
+
+        // Check for previous apps
+        if (System.IO.File.Exists(_vm?.saveFileName ?? "apps.json"))
+        {
+            try
+            {
+                var apps = JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(_vm?.saveFileName ?? "apps.json"));
+                if (apps != null && apps.Any())
+                {
+                    bool answer = App.ShowMessage($"Do you wish to restore {_appList?.Count} {(_appList?.Count == 1 ? "app?" : "apps?")}", owner: this);
+                    if (answer)
+                    {
+                        int extend = 0;
+                        foreach (var app in apps)
+                        {
+                            extend++;
+                            string fullPath = app.Location ?? string.Empty;
+                            _ = TimedTask.Schedule(() =>
+                            {
+                                try { Process.Start(fullPath); }
+                                catch { /* ignore if fails */ }
+                            },
+                            DateTime.Now.AddSeconds(extend));
+                        }
+                    }
+                }
+            }
+            catch { /* ignore parse errors */ }
+        }
+
+        if (_timer != null)
+            UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
+            
+        //_vm!.IsBusy = false;
+    }
+
+    void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_dialogWatcher)
+            _closer?.Cancel();
+        ConfigManager.Set("DialogWatcher", value: _dialogWatcher);
+        ConfigManager.Set("FirstRun", value: false);
+        ConfigManager.Set("PollIntervalInMinutes", value: _interval);
+        ConfigManager.Set("LastUse", value: DateTime.Now);
+        ConfigManager.Set("VoiceName", value: _voiceName ?? "Hortense");
+        if (_appList?.Count > 0)
+            _vm?.SaveExistingApps(_appList);
+        else
+            _vm?.SaveRunningApps();
+    }
+
     void Restore_Click(object sender, RoutedEventArgs e)
     {
         if (AppList == null || AppList.Items == null || AppList.Items.Count == 0)
@@ -171,101 +282,6 @@ public partial class MainWindow : Window
     }
 
     void Close_Click(object sender, RoutedEventArgs e) => this.Close();
-
-    void Window_Activated(object sender, EventArgs e)
-    {
-        // Check for recent backup (up to two weeks old)
-        int trys = 0;
-        var prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
-        while (!System.IO.File.Exists(prevFile) && ++trys < 15) { prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1 * trys):yyyyMMdd}.bak"; }
-        if (System.IO.File.Exists($"{prevFile}"))
-            ButtonBackup.IsEnabled = true;
-        else
-            ButtonBackup.IsEnabled = false;
-
-        // EventBus demonstration
-        App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Activated: {this.WindowState}");
-    }
-
-    void Window_Deactivated(object sender, EventArgs e)
-    {
-        // EventBus demonstration
-        App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Deactivated: {this.WindowState}");
-    }
-
-    void Window_Loaded(object sender, RoutedEventArgs e)
-    {
-        //_vm!.IsBusy = true;
-        UpdateText(tbStatus, $"Loading…");
-
-        if (_firstRun)
-        {
-            AnnounceMessage("Welcome to App Restorer.");
-            var location = this.GetType().Assembly?.Location;
-            if (!string.IsNullOrEmpty(location) && StartupAnalyzer.CreateDesktopShortcut("AppRestorer.lnk", location.Replace(".dll", ".exe")))
-                AnnounceMessage("I have created a desktop shortcut for you.");
-        }
-        else
-            AnnounceMessage("Loading App Restorer");
-
-
-        if (_appList == null)
-            InitAndLoadApps();
-
-        if (_appList?.Count == 0)
-        {
-            _vm?.SaveRunningApps();
-            InitAndLoadApps();
-        }
-
-        UpdateText(tbStatus, $"Select any of the {_appList?.Count} apps to restore…");
-
-        // Check for previous apps
-        if (System.IO.File.Exists(_vm?.saveFileName ?? "apps.json"))
-        {
-            try
-            {
-                var apps = JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(_vm?.saveFileName ?? "apps.json"));
-                if (apps != null && apps.Any())
-                {
-                    bool answer = App.ShowMessage($"Do you wish to restore {_appList?.Count} {(_appList?.Count == 1 ? "app?" : "apps?")}", owner: this);
-                    if (answer)
-                    {
-                        int extend = 0;
-                        foreach (var app in apps)
-                        {
-                            extend++;
-                            string fullPath = app.Location ?? string.Empty;
-                            _ = TimedTask.Schedule(() =>
-                            {
-                                try { Process.Start(fullPath); }
-                                catch { /* ignore if fails */ }
-                            },
-                            DateTime.Now.AddSeconds(extend));
-                        }
-                    }
-                }
-            }
-            catch { /* ignore parse errors */ }
-        }
-
-        if (_timer != null)
-            UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
-            
-        //_vm!.IsBusy = false;
-    }
-
-    void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-    {
-        ConfigManager.Set("FirstRun", value: false);
-        ConfigManager.Set("PollIntervalInMinutes", value: _interval);
-        ConfigManager.Set("LastUse", value: DateTime.Now);
-        ConfigManager.Set("VoiceName", value: _voiceName ?? "Hortense");
-        if (_appList?.Count > 0)
-            _vm?.SaveExistingApps(_appList);
-        else
-            _vm?.SaveRunningApps();
-    }
 
     void MainControl_MouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -532,7 +548,7 @@ public partial class MainWindow : Window
         {
             var voice = (ISpVoice)new SpVoice();
             voice.Rate = 0;     // -10 (slow) to +10 (fast)
-            voice.Volume = 80;  // 0 to 100
+            voice.Volume = 70;  // 0 to 100
             if (voice.SetVoiceByName(_voiceName ?? "Hazel"))
                 voice.Speak(message, SpeechVoiceSpeakFlags.SVSFDefault);
             else
@@ -676,28 +692,61 @@ public partial class MainWindow : Window
     /// dlgType 5 = [Retry] [Cancel] <br/>
     /// dlgType 6 = [Cancel] [Try Again] [Continue] <br/>
     /// </summary>
-    void ShowOldPopup(string message, int dlgType = 1)
+    void ShellShowPopup(string message, int dlgType = 1)
     {
-        // late-bind to the Windows Script Host COM automation object
-        var comObj = Type.GetTypeFromProgID("WScript.Shell");
-        if (comObj == null) { return; }
-        dynamic? shell = Activator.CreateInstance(comObj);
-
-        // Arguments: message, timeout(sec), title, type
-        var rez = shell?.Popup(message, 3, "Notice", dlgType);
-        if (rez != null)
+        try
         {
-            if ((int)rez == 1)
-                Debug.WriteLine($"Button 1 pressed");
-            else if ((int)rez == 2)
-                Debug.WriteLine($"Button 2 pressed");
+            // late-bind to the Windows Script Host COM automation object
+            var comObj = Type.GetTypeFromProgID("WScript.Shell");
+            if (comObj == null) { return; }
+
+            // create the System.__ComObject
+            dynamic? shell = Activator.CreateInstance(comObj);
+            if (shell == null) { return; }
+
+            // Arguments: message, timeout(sec), title, type
+            var rez = shell?.Popup(message, 3, "Notice", dlgType);
+            if (rez != null)
+            {
+                if ((int)rez == 1)
+                    Debug.WriteLine($"Button 1 pressed");
+                else if ((int)rez == 2)
+                    Debug.WriteLine($"Button 2 pressed");
+            }
+            // Cleanup
+            if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
         }
-        // Cleanup
-        if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
+        catch { /* Ignore */ }
     }
 
-    static async void RunTimedTaskTests()
+    void ShellSendKeys(string keys)
+    {
+
+        SendKeysHelper.SendToProcess("notepad", "Hello from AppRestorer!{ENTER}This was automated.");
+        SendKeysHelper.SendToWindowTitle("Untitled - Notepad", "^s"); // Ctrl+S
+        SendKeysHelper.ClickOkButton("Dialog Title");
+
+        try
+        {
+            // late-bind to the Windows Script Host COM automation object
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType == null) { return; }
+
+            // create the System.__ComObject
+            dynamic? shell = Activator.CreateInstance(shellType);
+            if (shell == null) { return; }
+
+            shell?.SendKeys(keys);
+
+            // Cleanup
+            if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
+        }
+        catch { /* Ignore */ }
+    }
+
+    async void RunTimedTaskTests()
     {
         #region [Without a return value]
         var tt1 = TimedTask.Schedule(() =>
@@ -781,7 +830,8 @@ public partial class MainWindow : Window
         var finalists = PreserveFavoritesWithMerge(list1, list2);
 
         // Using a join
-        List<RestoreItem>? result = list2.Join(list1, t => t.Location, s => s.Location,
+        List<RestoreItem>? result = list2
+            .Join(list1, t => t.Location, s => s.Location,
             (t, s) =>
             {
                 t.Favorite = s.Favorite;

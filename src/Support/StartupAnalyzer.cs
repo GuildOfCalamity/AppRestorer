@@ -261,6 +261,10 @@ public static class StartupAnalyzer
             string? target = lnk?.TargetPath as string;
             string? args = lnk?.Arguments as string;
 
+            // Cleanup
+            if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
+
             if (!string.IsNullOrWhiteSpace(target))
             {
                 var cmd = $"\"{target}\"";

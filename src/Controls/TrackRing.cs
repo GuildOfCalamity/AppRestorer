@@ -55,8 +55,8 @@ public partial class TrackRing : Control
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var width = 40d;
-        var height = 40d;
+        var width = 40D;
+        var height = 40D;
         if (DesignerProperties.GetIsInDesignMode(this) == false)
         {
             width = double.IsNaN(Width) == false ? Width : availableSize.Width;
@@ -91,7 +91,7 @@ public class TemplateSettingValues : DependencyObject
         nameof(EllipseDiameter),
         typeof(double),
         typeof(TemplateSettingValues),
-        new PropertyMetadata(0D));
+        new PropertyMetadata(60D));
     public double EllipseDiameter
     {
         get => (double)GetValue(EllipseDiameterProperty);
@@ -131,7 +131,7 @@ public class TemplateSettingValues : DependencyObject
         else
             EllipseDiameter = width / 9D;
 
-        MaxSideLength = width - EllipseDiameter;
-        EllipseOffset = new Thickness(0, EllipseDiameter * 2.0, 0, 0);
+        MaxSideLength = width - EllipseDiameter; // max grid size (TrackRing.xaml)
+        EllipseOffset = new Thickness(0, EllipseDiameter * 1.5D, 0, 0);
     }
 }

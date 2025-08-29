@@ -124,6 +124,10 @@ public interface ISpeechObjectTokens
 [Guid("96749377-3391-11D2-9EE3-00C04F797396")]
 public class SpVoice
 {
+    /*
+       HKEY_CLASSES_ROOT\CLSID\{96749377-3391-11D2-9EE3-00C04F797396}
+       VersionIndependentProgID = SAPI.SpVoice
+    */
 }
 
 

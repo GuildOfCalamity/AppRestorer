@@ -21,6 +21,8 @@
   <ItemGroup>
     <None Remove="AppIcon.ico" />
     <None Remove="AppIcon.png" />
+    <None Remove="Assets\AlertIcon2.png" />
+    <None Remove="Assets\AlertIcon3.png" />
     <None Remove="Assets\Apps.png" />
     <None Remove="Assets\FavoriteIcon1.png" />
     <None Remove="Assets\FavoriteIcon10.png" />
@@ -48,6 +50,15 @@
 
   <ItemGroup>
     <Content Include="AppIcon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\AlertIcon1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\AlertIcon2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\AlertIcon3.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Apps.png">
