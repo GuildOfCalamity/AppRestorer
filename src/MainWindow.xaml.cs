@@ -21,14 +21,16 @@ namespace AppRestorer;
 public partial class MainWindow : Window
 {
     #region [Local members]
-    App? _app;
-    List<RestoreItem>? _appList;
-    DispatcherTimer? _timer;
     bool _firstRun;
     bool _dialogWatcher;
     double _interval;
-    DateTime _lastUse;
+    double _windowLeft;
+    double _windowTop;
     string? _voiceName;
+    DateTime _lastUse;
+    App? _app;
+    List<RestoreItem>? _appList;
+    DispatcherTimer? _timer;
     MainViewModel? _vm;
     LinearGradientBrush _lvl0 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(120, 120, 120));
     LinearGradientBrush _lvl1 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(0, 181, 255));
@@ -69,6 +71,8 @@ public partial class MainWindow : Window
         _interval = ConfigManager.Get("PollIntervalInMinutes", defaultValue: 60D);
         _lastUse = ConfigManager.Get("LastUse", defaultValue: DateTime.Now);
         _voiceName = ConfigManager.Get("VoiceName", defaultValue: "Hortense");
+        _windowLeft = ConfigManager.Get("WindowLeft", defaultValue: 250D);
+        _windowTop = ConfigManager.Get("WindowTop", defaultValue: 200D);
         _dialogWatcher = ConfigManager.Get("DialogWatcher", defaultValue: false);
         if (_dialogWatcher)
             _closer = new ExplorerDialogCloser();
@@ -105,6 +109,8 @@ public partial class MainWindow : Window
     #region [Events]
     void Window_Activated(object sender, EventArgs e)
     {
+        _vm!.IsBusy = true;
+
         // Check for recent backup (up to two weeks old)
         int trys = 0;
         var prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
@@ -120,13 +126,16 @@ public partial class MainWindow : Window
 
     void Window_Deactivated(object sender, EventArgs e)
     {
+        _vm!.IsBusy = false;
+
         // EventBus demonstration
         App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Deactivated: {this.WindowState}");
     }
 
     void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        //_vm!.IsBusy = true;
+        // Check if position is on any screen
+        this.RestorePosition(_windowLeft, _windowTop);
 
         //App.ShowDialog($"{Environment.NewLine}Initializing…", "Notice",
         //    autoFocus: false,
@@ -171,7 +180,7 @@ public partial class MainWindow : Window
                         int extend = 0;
                         foreach (var app in apps)
                         {
-                            extend++;
+                            extend++; // Stagger each launch by one second
                             string fullPath = app.Location ?? string.Empty;
                             _ = TimedTask.Schedule(() =>
                             {
@@ -188,12 +197,12 @@ public partial class MainWindow : Window
 
         if (_timer != null)
             UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
-            
-        //_vm!.IsBusy = false;
     }
 
     void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+        _vm!.IsBusy = false;
+
         if (_dialogWatcher)
             _closer?.Cancel();
         ConfigManager.Set("DialogWatcher", value: _dialogWatcher);
@@ -201,6 +210,8 @@ public partial class MainWindow : Window
         ConfigManager.Set("PollIntervalInMinutes", value: _interval);
         ConfigManager.Set("LastUse", value: DateTime.Now);
         ConfigManager.Set("VoiceName", value: _voiceName ?? "Hortense");
+        ConfigManager.Set("WindowLeft", value: this.Left.IsInvalid() ? 250D : this.Left);
+        ConfigManager.Set("WindowTop", value: this.Top.IsInvalid() ? 200D : this.Top);
         if (_appList?.Count > 0)
             _vm?.SaveExistingApps(_appList);
         else

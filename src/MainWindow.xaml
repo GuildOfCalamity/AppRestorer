@@ -87,8 +87,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Foreground="{StaticResource DotsBrush}"
-                    IsActive="True"
-                    Visibility="Visible" />
+                    IsActive="{Binding IsBusy, Mode=OneWay}" />
 
             </StackPanel>
 

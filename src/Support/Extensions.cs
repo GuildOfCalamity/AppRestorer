@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -564,6 +565,48 @@ public static class Extensions
         }
     }
 
+    public static void RestorePosition(this Window window, double left, double top)
+    {
+        try
+        {
+            // Desktop bounds from WPF
+            double screenWidth = SystemParameters.VirtualScreenWidth;
+            double screenHeight = SystemParameters.VirtualScreenHeight;
+            double screenLeft = SystemParameters.VirtualScreenLeft;
+            double screenTop = SystemParameters.VirtualScreenTop;
+
+            // Validate that window fits inside current bounds
+            if (left >= screenLeft && top >= screenTop &&
+                left + window.Width <= screenLeft + screenWidth &&
+                top + window.Height <= screenTop + screenHeight)
+            {
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Left = left;
+                window.Top = top;
+            }
+        }
+        catch { /* ignore */ }
+    }
+
+#if SYSTEM_DRAWING
+    public static ImageSource GetFileIcon(string path)
+    {
+        try
+        {
+            if (System.IO.File.Exists(path))
+            {
+                using (Icon sysIcon = Icon.ExtractAssociatedIcon(path))
+                {
+                    if (sysIcon != null)
+                        return System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(sysIcon.Handle, System.Windows.Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                }
+            }
+        }
+        catch { /* Ignore */ }
+        return null;
+    }
+#endif
+
     /// <summary>
     /// <see cref="System.Windows.Media.Imaging.BitmapImage"/> helper method.
     /// </summary>
@@ -1099,9 +1142,9 @@ public static class Extensions
     {
         var retTask = await Task.WhenAny(task, Task.Delay(timeoutInMilliseconds)).ConfigureAwait(false);
 
-        #pragma warning disable CS8603 // Possible null reference return.
+#pragma warning disable CS8603 // Possible null reference return.
         return retTask is Task<T> ? task.Result : default;
-        #pragma warning restore CS8603 // Possible null reference return.
+#pragma warning restore CS8603 // Possible null reference return.
     }
 
     /// <summary>
@@ -1160,7 +1203,7 @@ public static class Extensions
         return tcs.Task;
     }
 
-    #pragma warning disable RECS0165 // Asynchronous methods should return a Task instead of void
+#pragma warning disable RECS0165 // Asynchronous methods should return a Task instead of void
     /// <summary>
     /// Attempts to await on the task and catches exception
     /// </summary>
@@ -1168,7 +1211,7 @@ public static class Extensions
     /// <param name="onException">What to do when method has an exception</param>
     /// <param name="continueOnCapturedContext">If the context should be captured.</param>
     public static async void SafeFireAndForget(this Task task, Action<Exception>? onException = null, bool continueOnCapturedContext = false)
-    #pragma warning restore RECS0165 // Asynchronous methods should return a Task instead of void
+#pragma warning restore RECS0165 // Asynchronous methods should return a Task instead of void
     {
         try
         {

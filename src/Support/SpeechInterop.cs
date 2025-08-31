@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 
@@ -157,8 +158,9 @@ public static class SpVoiceExtensions
             {
                 var token = voices.Item(i);
                 var desc = token.GetDescription();
-                if (desc.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!string.IsNullOrEmpty(desc) && desc.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
+                    Debug.WriteLine($"[INFO] Discovered speaker name '{desc}'.");
                     voice.Voice = token;
                     return true;
                 }
