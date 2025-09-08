@@ -4,7 +4,7 @@ namespace AppRestorer;
 public class RestoreItem
 {
     /// <summary>
-    /// Module's full path
+    /// Assembly's full path
     /// </summary>
     public string? Location { get; set; }
 

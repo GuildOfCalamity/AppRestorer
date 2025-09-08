@@ -16,8 +16,9 @@
             <LinearGradientBrush x:Key="DotsBrush" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
-                        <GradientStop Offset="0.0" Color="#FFFFFF" />
-                        <GradientStop Offset="1.0" Color="#191919" />
+                        <GradientStop Offset="0" Color="#FFFFFF" />
+                        <GradientStop Offset="0.4" Color="#505050" />
+                        <GradientStop Offset="1" Color="#707070" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>

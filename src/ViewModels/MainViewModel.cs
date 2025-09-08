@@ -217,7 +217,10 @@ public class MainViewModel : INotifyPropertyChanged
         {
             System.IO.File.WriteAllText(saveFileName, JsonSerializer.Serialize(runningApps, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch (Exception) { /* Ignore */ }
+        catch (Exception ex)
+        {
+            Extensions.WriteToLog($"SaveRunningApps: {ex.Message}");
+        }
     }
 
     public void SaveExistingApps(List<RestoreItem>? appList)
@@ -229,7 +232,10 @@ public class MainViewModel : INotifyPropertyChanged
         {
             System.IO.File.WriteAllText(saveFileName, JsonSerializer.Serialize(appList, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch (Exception) { /* Ignore */ }
+        catch (Exception ex)
+        {
+            Extensions.WriteToLog($"SaveExistingApps: {ex.Message}");
+        }
     }
 
     public List<RestoreItem> LoadSavedApps(string filePath = "")
@@ -243,7 +249,11 @@ public class MainViewModel : INotifyPropertyChanged
         {
             return JsonSerializer.Deserialize<List<RestoreItem>>(System.IO.File.ReadAllText(filePath)) ?? new List<RestoreItem>();
         }
-        catch { return new List<RestoreItem>(); }
+        catch (Exception ex)
+        { 
+            Extensions.WriteToLog($"LoadSavedApps: {ex.Message}");
+            return new List<RestoreItem>(); 
+        }
     }
 
     public void BackupAppFile(bool replaceExisting)
@@ -254,7 +264,10 @@ public class MainViewModel : INotifyPropertyChanged
             if (System.IO.File.Exists(saveFileName) && (!System.IO.File.Exists(bkup) || replaceExisting))
                 System.IO.File.Copy(saveFileName, $"{bkup}", true);
         }
-        catch { /* Ignore */ }
+        catch (Exception ex)
+        {
+            Extensions.WriteToLog($"BackupAppFile: {ex.Message}");
+        }
     }
     #endregion
 

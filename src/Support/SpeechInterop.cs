@@ -120,7 +120,6 @@ public interface ISpeechObjectTokens
     ISpeechObjectToken Item(int index);
 }
 
-
 [ComImport]
 [Guid("96749377-3391-11D2-9EE3-00C04F797396")]
 public class SpVoice
@@ -130,7 +129,6 @@ public class SpVoice
        VersionIndependentProgID = SAPI.SpVoice
     */
 }
-
 
 public static class SpVoiceExtensions
 {
@@ -160,9 +158,13 @@ public static class SpVoiceExtensions
                 var desc = token.GetDescription();
                 if (!string.IsNullOrEmpty(desc) && desc.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    Debug.WriteLine($"[INFO] Discovered speaker name '{desc}'.");
+                    Debug.WriteLine($"[INFO] Matched speaker name \"{desc}\"");
                     voice.Voice = token;
                     return true;
+                }
+                else if (!string.IsNullOrEmpty(desc))
+                {
+                    Debug.WriteLine($"[INFO] Discovered speaker name \"{desc}\"");
                 }
             }
         }

@@ -242,7 +242,10 @@ public static class StartupAnalyzer
 
             return true;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Extensions.WriteToLog($"CreateDesktopShortcut: {ex.Message}");
+        }
         return false;
     }
 

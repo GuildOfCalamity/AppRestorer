@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Net.NetworkInformation;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -29,7 +28,7 @@ public partial class MessageBoxWindow : Window
     #region [Events]
     void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // If window gets buried, then re-activate it for the user.
+        // If window gets buried, then re-activate or close it for the user.
         _timer = new DispatcherTimer();
         _timer.Interval = TimeSpan.FromSeconds(15D);
         _timer.Tick += (s, ev) =>
@@ -62,6 +61,14 @@ public partial class MessageBoxWindow : Window
     void No_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = Result = false; // close window
+    }
+
+    void Window_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            DialogResult = Result = false; // close window
+        }
     }
 
     /// <summary>

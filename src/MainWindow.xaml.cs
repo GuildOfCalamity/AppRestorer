@@ -1,8 +1,11 @@
-﻿using System.Diagnostics;
-using System.Globalization;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Security.AccessControl;
+using System.Security.Principal;
+
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,23 +26,24 @@ public partial class MainWindow : Window
     #region [Local members]
     bool _firstRun;
     bool _dialogWatcher;
+    bool _runOnStartup;
     double _interval;
     double _windowLeft;
     double _windowTop;
     string? _voiceName;
+    string? _stopService;
     DateTime _lastUse;
     App? _app;
     List<RestoreItem>? _appList;
     DispatcherTimer? _timer;
     MainViewModel? _vm;
+    ExplorerDialogCloser? _closer;
     LinearGradientBrush _lvl0 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(120, 120, 120));
     LinearGradientBrush _lvl1 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(0, 181, 255));
     LinearGradientBrush _lvl2 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 216, 0));
     LinearGradientBrush _lvl3 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 106, 0));
     LinearGradientBrush _lvl4 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 0, 0));
     #endregion
-
-    ExplorerDialogCloser? _closer;
 
     public MainWindow()
     {
@@ -68,14 +72,19 @@ public partial class MainWindow : Window
                 MessageBoxImage.Warning);
         };
         _firstRun = ConfigManager.Get("FirstRun", defaultValue: true);
+        _runOnStartup = ConfigManager.Get("RunOnStartup", defaultValue: false);
         _interval = ConfigManager.Get("PollIntervalInMinutes", defaultValue: 60D);
         _lastUse = ConfigManager.Get("LastUse", defaultValue: DateTime.Now);
-        _voiceName = ConfigManager.Get("VoiceName", defaultValue: "Hortense");
         _windowLeft = ConfigManager.Get("WindowLeft", defaultValue: 250D);
         _windowTop = ConfigManager.Get("WindowTop", defaultValue: 200D);
+        // Example of playing the old-school SAPI audio voices.
+        _voiceName = ConfigManager.Get("VoiceName", defaultValue: "Hortense");
+        // Example of watching for and stopping a recurring service of your choice.
+        _stopService = ConfigManager.Get("StopServiceIfRunning", defaultValue: string.Empty);
+        // Example of watching and closing the annoying "Restoring Network Connections" dialogs from Explorer.
         _dialogWatcher = ConfigManager.Get("DialogWatcher", defaultValue: false);
         if (_dialogWatcher)
-            _closer = new ExplorerDialogCloser();
+            _closer = new ExplorerDialogCloser(verbose: true);
         #endregion
 
         #region [Timer for recording apps]
@@ -83,6 +92,9 @@ public partial class MainWindow : Window
         _timer.Interval = TimeSpan.FromMinutes(_interval);
         _timer.Tick += (s, ev) =>
         {
+            if (!string.IsNullOrEmpty(_stopService))
+                Task.Run(() => ServiceInterop.CheckService(_stopService, stopIfRunning: true));
+
             UpdateText(tbStatus, $"Scanning…");
             _vm?.BackupAppFile(false);
             if (_appList?.Count > 0)
@@ -134,9 +146,6 @@ public partial class MainWindow : Window
 
     void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // Check if position is on any screen
-        this.RestorePosition(_windowLeft, _windowTop);
-
         //App.ShowDialog($"{Environment.NewLine}Initializing…", "Notice",
         //    autoFocus: false,
         //    autoClose: TimeSpan.FromSeconds(3),
@@ -144,6 +153,14 @@ public partial class MainWindow : Window
         //    owner: null);
 
         UpdateText(tbStatus, $"Loading…");
+
+        // Check if position is on any screen
+        this.RestorePosition(_windowLeft, _windowTop);
+
+        //ServiceInteropHelper.RunTests();
+
+        // Are we required in startup?
+        RegistryStartupHelper.SetStartup("AppRestorer", _runOnStartup);
 
         if (_firstRun)
         {
@@ -206,10 +223,12 @@ public partial class MainWindow : Window
         if (_dialogWatcher)
             _closer?.Cancel();
         ConfigManager.Set("DialogWatcher", value: _dialogWatcher);
+        ConfigManager.Set("RunOnStartup", value: _runOnStartup);
         ConfigManager.Set("FirstRun", value: false);
         ConfigManager.Set("PollIntervalInMinutes", value: _interval);
         ConfigManager.Set("LastUse", value: DateTime.Now);
         ConfigManager.Set("VoiceName", value: _voiceName ?? "Hortense");
+        ConfigManager.Set("StopServiceIfRunning", _stopService ?? string.Empty);
         ConfigManager.Set("WindowLeft", value: this.Left.IsInvalid() ? 250D : this.Left);
         ConfigManager.Set("WindowTop", value: this.Top.IsInvalid() ? 200D : this.Top);
         if (_appList?.Count > 0)
@@ -225,6 +244,9 @@ public partial class MainWindow : Window
             UpdateText(tbStatus, $"No apps to restore at {DateTime.Now.ToLongTimeString()}");
             return;
         }
+
+        // You can force an update to the control's visual state by using the CommandManager.
+        //this.Dispatcher.Invoke(new Action(CommandManager.InvalidateRequerySuggested)); // similar to WinForm's Application.DoEvents()
 
         int enabled = GetEnabledAppCount();
         if (enabled == 0)
@@ -553,19 +575,23 @@ public partial class MainWindow : Window
     #endregion
 
     #region [Superfluous]
-    void AnnounceMessage(string message)
+    /// <summary>
+    /// SAPI still works in Win10/11
+    /// </summary>
+    /// <param name="message">text to speak</param>
+    void AnnounceMessage(string message, int volume = 70)
     {
         try
         {
             var voice = (ISpVoice)new SpVoice();
-            voice.Rate = 0;     // -10 (slow) to +10 (fast)
-            voice.Volume = 70;  // 0 to 100
+            voice.Rate = 0; // -10 (slow) to +10 (fast)
+            voice.Volume = (volume < 1 || volume > 100) ? 70 : volume; // 0 to 100
             if (voice.SetVoiceByName(_voiceName ?? "Hazel"))
                 voice.Speak(message, SpeechVoiceSpeakFlags.SVSFDefault);
             else
                 voice.Speak(message, SpeechVoiceSpeakFlags.SVSFDefault);
 
-            // If using SVSFlagsAsync, or create voice as global object so GC won't occur.
+            // If using SVSFlagsAsync - or create voice as global object so GC won't occur.
             //voice.WaitUntilDone(2000);
         }
         catch { }
@@ -757,6 +783,34 @@ public partial class MainWindow : Window
         catch { /* Ignore */ }
     }
 
+    void RunCommand()
+    {
+        Extensions.RunCommandAsync(() => _vm!.IsBusy, async () =>
+        {
+            //Extensions.InvokeIf(() => { /* UI update */ });
+            
+            AnnounceMessage("Begin Command");
+
+            /** The old-school way **/
+            //ThreadPool.QueueUserWorkItem(o => _ = RunFileTasks(tok));
+
+            /** The new-school way **/
+            //var tsk = Task.Run(async () => await RunFileTasks(tok));
+
+            // Wait for remaining tasks to complete...
+            //await Task.WhenAll(tsk).ContinueWith(tsk => { Debug.WriteLine($"[Task Status: {tsk.Status}]"); });
+
+            // Small delay after finish
+            //await Task.Delay(300, tok);
+
+        }).ContinueWith(t =>
+        {
+            AnnounceMessage($"Command Complete: {t.Status}");
+            // Ensure that the FrameworkElement's visual state is updated.
+            this.Dispatcher.Invoke(new Action(CommandManager.InvalidateRequerySuggested));
+        });
+    }
+
     async void RunTimedTaskTests()
     {
         #region [Without a return value]
@@ -828,6 +882,23 @@ public partial class MainWindow : Window
         var result = await asyncTimedTask.ResultTask;
         Debug.WriteLine("Final Async Result: " + result);
         #endregion
+    }
+
+    async Task DisposablesTest()
+    {
+        Debug.WriteLine("[INFO] AsyncDisposable.Create() ...");
+        await using var scopeAsync = AsyncDisposable.Create(async () =>
+        {
+            await Task.Delay(1000);
+            Debug.WriteLine("[INFO] async done!");
+        });
+
+        Debug.WriteLine("[INFO] Disposable.Create() ...");
+        using var scope = Disposable.Create(() =>
+        {
+            Thread.Sleep(1000);
+            Debug.WriteLine("[INFO] non-async done!");
+        });
     }
 
     void TestingJoinPreserve()

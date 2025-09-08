@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="App Restorer"
     Width="950"
-    Height="450"
+    Height="550"
     Activated="Window_Activated"
     AllowsTransparency="True"
     Background="Transparent"
@@ -80,6 +80,7 @@
                     FontSize="18"
                     Foreground="{StaticResource TitleBrush}"
                     Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+                <!--
                 <ctrl:TrackRing
                     Width="40"
                     Height="40"
@@ -88,7 +89,20 @@
                     VerticalAlignment="Center"
                     Foreground="{StaticResource DotsBrush}"
                     IsActive="{Binding IsBusy, Mode=OneWay}" />
-
+                -->
+                <ctrl:DotAnimation
+                    Width="70"
+                    Height="20"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    DotDuration="0.6"
+                    DotMinimum="0.6"
+                    DotOpacity="0.7"
+                    DotRadius="10"
+                    DotSize="16"
+                    DotSpacing="5.5"
+                    FillColor="{StaticResource DotsBrush}"
+                    IsRunning="{Binding IsBusy, Mode=OneWay, FallbackValue=true}" />
             </StackPanel>
 
             <Border
@@ -103,8 +117,8 @@
                 <ListBox
                     x:Name="AppList"
                     MinWidth="680"
-                    MinHeight="260"
-                    MaxHeight="260"
+                    MinHeight="360"
+                    MaxHeight="360"
                     Margin="0"
                     Background="Transparent"
                     BorderThickness="0">
@@ -149,8 +163,10 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
             </Border>
+
+            <!--#region [Controls]-->
             <StackPanel
-                Margin="10"
+                Margin="10,20,10,-12"
                 HorizontalAlignment="Stretch"
                 DockPanel.Dock="Bottom"
                 Orientation="Horizontal">
@@ -196,6 +212,7 @@
                     FontSize="15"
                     Template="{StaticResource ReformedButton}" />
             </StackPanel>
+            <!--#endregion-->
         </DockPanel>
     </Border>
 </Window>

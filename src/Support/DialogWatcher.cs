@@ -16,7 +16,7 @@ public class ExplorerDialogCloser
     readonly string _partialTitle;
     readonly Timer? _timer;
 
-    public ExplorerDialogCloser(string partialTitle = "Restoring Network", int checkIntervalMs = 30000, bool verbose = false)
+    public ExplorerDialogCloser(string partialTitle = "Restoring Network", int checkIntervalMs = 15000, bool verbose = false)
     {
         _verbose = verbose;
         _partialTitle = partialTitle;
@@ -42,7 +42,17 @@ public class ExplorerDialogCloser
     static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
     const uint BM_CLICK = 0x00F5;
+    const int SW_HIDE = 0;
+    const int SW_SHOWNORMAL = 1;
+    const int SW_SHOWMINIMIZED = 2;
+    const int SW_MAXIMIZE = 3;
+    const int SW_SHOWNOACTIVATE = 4;
+    const int SW_SHOW = 5;
+    const int SW_MINIMIZE = 6;
+    const int SW_SHOWMINNOACTIVE = 7;
+    const int SW_SHOWNA = 8;
     const int SW_RESTORE = 9;
+    const int SW_SHOWDEFAULT = 10;
     const int CB_ERR = -1;
     const int CB_SELECTSTRING = 0x014D;
     const int WM_SETTEXT = 0x000C;
@@ -86,7 +96,7 @@ public class ExplorerDialogCloser
                         // Send BM_CLICK to button handle
                         PostMessage(hButton, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
                         if (_verbose)
-                            Debug.WriteLine($"[INFO] Closed dialog '{title}'");
+                            Extensions.WriteToLog($"ExplorerDialog: Closed dialog handle {hWnd}");
                     }
                 }
                 return true; // continue enumeration
@@ -94,9 +104,8 @@ public class ExplorerDialogCloser
         }
         catch (Exception ex)
         {
-            // Ignore transient UI Automation errors
             if (_verbose)
-                Debug.WriteLine($"[WARNING] CheckAndClose: {ex.Message}");
+                Extensions.WriteToLog($"ExplorerDialog.CheckAndClose(ERROR): {ex.Message}");
         }
     }
 
@@ -119,7 +128,7 @@ public class DialogCloserUsingAutomation
     readonly string _partialTitle;
     readonly Timer? _timer;
 
-    public DialogCloserUsingAutomation(string partialTitle = "Restoring Network", int checkIntervalMs = 3000, bool verbose = false)
+    public DialogCloserUsingAutomation(string partialTitle = "Restoring Network", int checkIntervalMs = 30000, bool verbose = false)
     {
         _partialTitle = partialTitle;
         _timer = new Timer(CheckAndClose, null, 0, checkIntervalMs);

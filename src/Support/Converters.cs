@@ -50,7 +50,7 @@ public class BoolToImageConverter : IValueConverter
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ERROR] BoolToImageConverter: {ex.Message}");
+            Extensions.WriteToLog($"BoolToImageConverter: {ex.Message}");
             return null;
         }
     }
@@ -73,7 +73,7 @@ public class PathToImageConverter : IValueConverter
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ERROR] PathToImageConverter: {ex.Message}");
+            Extensions.WriteToLog($"PathToImageConverter: {ex.Message}");
             return null;
         }
     }
@@ -103,7 +103,7 @@ public class ImagePathConverter : IValueConverter
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ERROR] ImagePathConverter: {ex.Message}");
+            Extensions.WriteToLog($"ImagePathConverter: {ex.Message}");
             return null;
         }
     }

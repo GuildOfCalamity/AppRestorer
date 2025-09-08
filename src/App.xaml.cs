@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,6 +13,7 @@ public partial class App : Application
     public static string RuntimeInfo { get; set; } = string.Empty;
     public static string BuildConfig { get; set; } = string.Empty;
     public static string BaseDirectory { get; set; } = string.Empty;
+    public static string AppDataDirectory { get; set; } = string.Empty;
     public static EventBus RootEventBus { get; set; } = new();
 
     #region [Overrides]
@@ -23,6 +23,7 @@ public partial class App : Application
         AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
         //Debug.WriteLine($"[INFO] AppDomainFullTrust: {AppDomain.CurrentDomain.IsFullyTrusted}");
 
+        AppDataDirectory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GetCurrentAssemblyName());
         BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
         RuntimeInfo = $"{Extensions.GetRuntimeInfo()}";
         BuildConfig = $"{typeof(App).GetBuildConfig()}";
@@ -92,7 +93,7 @@ public partial class App : Application
     #endregion
 
     #region [Domain Exceptions]
-    void CurrentDomain_FirstChanceException(object? sender, FirstChanceExceptionEventArgs e)
+    void CurrentDomain_FirstChanceException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
     {
         if (!string.IsNullOrEmpty(e.Exception.Message) &&
             !e.Exception.Message.StartsWith("A task was canceled", StringComparison.OrdinalIgnoreCase) &&

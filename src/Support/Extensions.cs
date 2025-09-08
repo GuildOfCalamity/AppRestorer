@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -13,8 +15,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace AppRestorer;
 
@@ -32,7 +36,7 @@ public static class Extensions
         if (_logCache.Add(message))
         {
             _logCacheUpdated = DateTime.Now;
-            try { System.IO.File.AppendAllText(fileName, $"{message}{Environment.NewLine}"); }
+            try { System.IO.File.AppendAllText(fileName, $"[{DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss.fff tt")}] {message}{Environment.NewLine}"); }
             catch (Exception) { }
             
         }
@@ -565,6 +569,30 @@ public static class Extensions
         }
     }
 
+    /// <summary>
+    /// Example image source setting method.
+    /// </summary>
+    /// <param name="imgCtrl"><see cref="Image"/> control to update</param>
+    /// <param name="ImageUrl">URL path to the image source</param>
+    public static async Task UpdateImageFromRemoteSource(this Image imgCtrl, string imgUrl)
+    {
+        var client = new System.Net.Http.HttpClient();
+        byte[] bytes = await client.GetByteArrayAsync(imgUrl);
+        var image = new BitmapImage();
+        using (var mem = new MemoryStream(bytes))
+        {
+            mem.Position = 0;
+            image.BeginInit();
+            image.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = mem;
+            image.EndInit();
+        }
+        image.Freeze();
+        client.Dispose();
+        imgCtrl.Source = image;
+    }
+
     public static void RestorePosition(this Window window, double left, double top)
     {
         try
@@ -710,7 +738,7 @@ public static class Extensions
     /// <returns>A DateTime object representing the parsed date and time, or null if the string is invalid.</returns>
     public static DateTime ParseJsonDateTime(this string jsonDateTimeString)
     {
-        if (string.IsNullOrEmpty(jsonDateTimeString))
+        if (string.IsNullOrWhiteSpace(jsonDateTimeString))
             return DateTime.MinValue;
 
         try
@@ -728,6 +756,7 @@ public static class Extensions
         var joined = new[] { list1, list2 }.Where(x => x != null).SelectMany(x => x);
         return joined ?? Enumerable.Empty<T>();
     }
+
     public static IEnumerable<T> JoinMany<T>(params IEnumerable<T>[] array)
     {
         var final = array.Where(x => x != null).SelectMany(x => x);
@@ -1097,6 +1126,17 @@ public static class Extensions
 
     #region [Task Helpers]
     /// <summary>
+    /// Semaphore extension method for disposable tasks.
+    /// </summary>
+    /// <param name="ss"><see cref="SemaphoreSlim"/></param>
+    /// <returns>a disposable task</returns>
+    public static async Task<IDisposable> EnterAsync(this SemaphoreSlim ss)
+    {
+        await ss.WaitAsync().ConfigureAwait(false);
+        return Disposable.Create(() => ss.Release());
+    }
+
+    /// <summary>
     /// Task.Factory.StartNew (() => { throw null; }).IgnoreExceptions();
     /// </summary>
     public static void IgnoreExceptions(this Task task, Action<Exception>? errorHandler = null)
@@ -1227,6 +1267,146 @@ public static class Extensions
         }
     }
     #endregion
+
+    /// <summary>
+    /// A  WinForms-like "DoEvents" UI repaint.
+    /// </summary>
+    /// <param name="useNestedFrame">if true, employ <see cref="Dispatcher.PushFrame"/></param>
+    public static void DoEvents(bool useNestedFrame = false)
+    {
+        if (!useNestedFrame)
+            System.Windows.Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new System.Threading.ThreadStart(() => System.Threading.Thread.Sleep(0)));
+        else
+        {
+            // Create new nested message pump.
+            DispatcherFrame nested = new DispatcherFrame(true);
+
+            // Dispatch a callback to the current message queue, when getting called,
+            // this callback will end the nested message loop. The priority of this
+            // callback should always be lower than that of the UI event messages.
+            #pragma warning disable CS8622 // Nullability of reference types
+            var exitFrameOp = Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, (SendOrPostCallback)delegate (object arg)
+            {
+                var f = arg as DispatcherFrame;
+                if (f != null) { f.Continue = false; }
+            }, nested);
+            #pragma warning restore CS8622
+
+            // Pump the nested message loop, the nested message loop will immediately
+            // process the messages left inside the message queue.
+            Dispatcher.PushFrame(nested);
+
+            // If the exit frame callback doesn't get completed, abort it.
+            if (exitFrameOp.Status != DispatcherOperationStatus.Completed)
+                exitFrameOp.Abort();
+        }
+    }
+
+    /// <summary>
+    /// A handy method to determine if a call to the Application Dispatcher is necessary.
+    /// </summary>
+    /// <param name="action">The <see cref="Action"/> to perform.</param>
+    public static void InvokeIf(Action execute)
+    {
+        if (System.Threading.Thread.CurrentThread == Application.Current.Dispatcher.Thread)
+            execute();
+        else
+            Application.Current.Dispatcher.Invoke(execute);
+
+        /** Other Techniques **/
+        /*
+        System.Windows.Threading.Dispatcher dispatcher = System.Windows.Threading.Dispatcher.FromThread(Thread.CurrentThread);
+        if (dispatcher != null)
+        {
+            // We know the thread have a dispatcher that we can use.
+            CustomMessageBox.Show($" Thread test at {DateTime.Now.ToLongTimeString()} ", $"{App.SystemTitle}", 2000); // show for 2 seconds
+        }
+
+        // -- Also --
+        if (dispatcher != null && dispatcher.CheckAccess())
+        {
+            try
+            {
+                dispatcher.VerifyAccess();
+                // Calling thread is associated with the Dispatcher, so...
+                // do whatever you want here and know it's on the GUI thread.
+            }
+            catch (InvalidOperationException)
+            {
+                // Thread can't use dispatcher
+            }
+        }
+        */
+    }
+
+    /// <summary>
+    /// Runs a command if the updating flag is not set.
+    /// If the flag is true (indicating the function is already running) then the action is not run.
+    /// If the flag is false (indicating no running function) then the action is run.
+    /// Once the action is finished if it was run, then the flag is reset to false
+    /// </summary>
+    /// <param name="updatingFlag">The boolean property flag defining if the command is already running. This variable must be a property.</param>
+    /// <param name="action">The action to run if the command is not already running.</param>
+    /// <returns></returns>
+    public static async Task RunCommandAsync(System.Linq.Expressions.Expression<Func<bool>> updatingFlag, Func<Task> action)
+    {
+        // Check if the flag property is true (meaning the function is already running)
+        if (updatingFlag.GetPropertyValue())
+            return;
+
+        // Set the property flag to true to indicate we are running
+        updatingFlag.SetPropertyValue(true);
+
+        try
+        {
+            // Run the passed in action
+            await action();
+        }
+        finally
+        {
+            // Set the property flag back to false now it's finished
+            updatingFlag.SetPropertyValue(false);
+        }
+    }
+
+    /// <summary>
+    /// Compiles an expression and gets the functions return value
+    /// </summary>
+    /// <typeparam name="T">The type of return value</typeparam>
+    /// <param name="lambda">The expression to compile</param>
+    /// <returns></returns>
+    public static T GetPropertyValue<T>(this System.Linq.Expressions.Expression<Func<T>> lambda)
+    {
+        // Compile & invoke the expression and return the target
+        return lambda.Compile().Invoke();
+    }
+
+    /// <summary>
+    /// Sets the underlying properties value to the given value
+    /// from an expression that contains the property
+    /// </summary>
+    /// <typeparam name="T">The type of value to set</typeparam>
+    /// <param name="lambda">The expression</param>
+    /// <param name="value">The value to set the property to</param>
+    public static void SetPropertyValue<T>(this System.Linq.Expressions.Expression<Func<T>> lambda, T value)
+    {
+        // Converts a lambda () => some.Property, to some.Property
+        var expression = (lambda as System.Linq.Expressions.LambdaExpression).Body as System.Linq.Expressions.MemberExpression;
+        if (expression == null)
+            return;
+
+        // Get the property information so we can set it
+        var propertyInfo = (System.Reflection.PropertyInfo?)expression?.Member;
+
+        // Compile & invoke the expression to get the target object instance
+        var target = System.Linq.Expressions.Expression.Lambda(expression?.Expression)?.Compile()?.DynamicInvoke();
+        if (target == null)
+            return;
+
+        // Set the property value
+        propertyInfo?.SetValue(target, value);
+
+    }
 
     /// <summary>
     /// Fetch all referenced <see cref="System.Reflection.AssemblyName"/> used by the current process.
@@ -1382,5 +1562,80 @@ public static class Extensions
             return results.Distinct().ToList();
         }
         catch (Exception) { return results; }
+    }
+}
+
+/// <summary>
+/// Provides a set of static methods for creating Disposables.
+/// This is based off of
+/// https://docs.microsoft.com/en-us/previous-versions/dotnet/reactive-extensions/hh229792(v=vs.103)
+/// </summary>
+public static class Disposable
+{
+    /// <summary>
+    /// Creates the disposable that invokes the specified action when disposed.
+    /// </summary>
+    /// <example>
+    /// using var scope = Disposable.Create(() => Console.WriteLine("Done!"))
+    /// {
+    ///    [Do stuff here]
+    /// } // scope is disposed and Working on it... is printed to console 
+    /// </example>
+    /// <param name="onDispose">The action to run during IDisposable.Dispose.</param>
+    /// <returns>The disposable object that runs the given action upon disposal.</returns>
+    public static IDisposable Create(Action onDispose) => new ActionDisposable(onDispose);
+
+    class ActionDisposable : IDisposable
+    {
+        volatile Action? _onDispose;
+
+        public ActionDisposable(Action onDispose)
+        {
+            _onDispose = onDispose;
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _onDispose, null)?.Invoke();
+        }
+    }
+}
+
+/// <summary>
+/// Helper class for creating an asynchronous scope.
+/// A scope is simply a using block that calls an async method
+/// at the end of the block by returning an <see cref="IAsyncDisposable"/>.
+/// This is the same concept as
+/// the <see cref="Disposable.Create"/> method.
+/// </summary>
+/// <remarks>ValueTask.CompletedTask is only available in .NET 5.0 and up.</remarks>
+/// http://haacked.com/archive/2021/12/10/async-disposables/
+public static class AsyncDisposable
+{
+    /// <summary>
+    /// Creates an <see cref="IAsyncDisposable"/> that calls
+    /// the specified method asynchronously at the end
+    /// of the scope upon disposal.
+    /// </summary>
+    /// <param name="onDispose">The method to call at the end of the scope.</param>
+    /// <returns>An <see cref="IAsyncDisposable"/> that represents the scope.</returns>
+    public static IAsyncDisposable Create(Func<ValueTask> onDispose)
+    {
+        return new AsyncScope(onDispose);
+    }
+
+    class AsyncScope : IAsyncDisposable
+    {
+        Func<ValueTask>? _onDispose;
+
+        public AsyncScope(Func<ValueTask> onDispose)
+        {
+            _onDispose = onDispose;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return Interlocked.Exchange(ref _onDispose, null)?.Invoke() ?? ValueTask.CompletedTask;
+        }
     }
 }
