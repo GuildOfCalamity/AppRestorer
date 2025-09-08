@@ -307,15 +307,16 @@ public static class ServiceInterop
 
 
 /// <summary>
-/// Lightweight service interop helpers using advapi32 functions you provided.
+/// Lightweight service interop helpers using advapi32 functions.
 /// Use the disposable handle wrappers to ensure handles are closed.
+/// This is my revamped version of <see cref="ServiceInterop"/>.
 /// </summary>
 /// <remarks>
 /// https://learn.microsoft.com/en-us/windows/win32/services/service-control-manager
 /// </remarks>
 public static class ServiceInteropHelper
 {
-    /*
+    /* [NOTES]
       During system boot, the SCM starts all auto-start services and the services on which they depend. 
       For example, if an auto-start service depends on a demand-start service, the demand-start service 
       is also started automatically.
@@ -396,6 +397,15 @@ public static class ServiceInteropHelper
     [DllImport("advapi32.dll", EntryPoint = "QueryServiceStatus", CharSet = CharSet.Auto)]
     internal static extern bool QueryServiceStatus(IntPtr hService, ref SERVICE_STATUS dwServiceStatus);
 
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool QueryServiceConfig2(
+        IntPtr hService,
+        uint dwInfoLevel,
+        IntPtr lpBuffer,
+        uint cbBufSize,
+        out uint pcbBytesNeeded);
+
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-setservicestatus
     [DllImport("advapi32.dll")]
     internal static extern bool SetServiceStatus(IntPtr hServiceStatus, ref SERVICE_STATUS lpServiceStatus);
@@ -417,6 +427,21 @@ public static class ServiceInteropHelper
         string lpServiceStartName,
         string lpPassword);
 
+    /// <summary>
+    /// An extended version of ControlService, allowing you to send control codes (stop, pause, continue, interrogate, user-defined) with additional info.
+    /// </summary>
+    /// <remarks>
+    /// https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-controlserviceexw
+    /// </remarks>
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool ControlServiceExW(
+        IntPtr hService,
+        SERVICE_CONTROL dwControl,
+        uint dwInfoLevel,
+        ref SERVICE_STATUS_PROCESS lpServiceStatus);
+
+
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-changeserviceconfig2w
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern bool ChangeServiceConfig(
@@ -431,6 +456,13 @@ public static class ServiceInteropHelper
         string lpServiceStartName,
         string lpPassword,
         string lpDisplayName);
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool ChangeServiceConfig2(
+        IntPtr hService,
+        uint dwInfoLevel,
+        ref SERVICE_DELAYED_AUTO_START_INFO lpInfo);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-queryserviceconfigw
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -454,6 +486,27 @@ public static class ServiceInteropHelper
         public uint dwServiceSpecificExitCode;
         public uint dwCheckPoint;
         public uint dwWaitHint;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SERVICE_STATUS_PROCESS
+    {
+        public uint dwServiceType;
+        public uint dwCurrentState;
+        public uint dwControlsAccepted;
+        public uint dwWin32ExitCode;
+        public uint dwServiceSpecificExitCode;
+        public uint dwCheckPoint;
+        public uint dwWaitHint;
+        public uint dwProcessId;
+        public uint dwServiceFlags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SERVICE_DELAYED_AUTO_START_INFO
+    {
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool fDelayedAutostart;
     }
 
     [Flags]
@@ -560,6 +613,12 @@ public static class ServiceInteropHelper
 
     // Service config
     public const uint SERVICE_NO_CHANGE = 0xFFFFFFFF;
+
+    // Info levels for ControlServiceExW
+    public const uint SERVICE_CONTROL_STATUS_REASON_INFO = 1;
+
+    // For ChangeServiceConfig2
+    public const uint SERVICE_CONFIG_DELAYED_AUTO_START_INFO = 3;
 
     #endregion
 
@@ -829,6 +888,31 @@ public static class ServiceInteropHelper
     }
 
     /// <summary>
+    /// Sends a control code to a service with extended info.
+    /// </summary>
+    /// <param name="svcHandle">Handle to the service</param>
+    /// <param name="control">Control code (stop, pause, interrogate, user-defined)</param>
+    /// <returns>The updated service status process</returns>
+    public static SERVICE_STATUS_PROCESS ControlServiceExHandle(ServiceHandle svcHandle, SERVICE_CONTROL control)
+    {
+        if (svcHandle == null) 
+            throw new ArgumentNullException(nameof(svcHandle));
+
+        var status = new SERVICE_STATUS_PROCESS();
+
+        bool ok = ControlServiceExW(
+            svcHandle.Handle,
+            control,
+            SERVICE_CONTROL_STATUS_REASON_INFO,
+            ref status);
+
+        if (!ok)
+            ThrowLastWin32($"ControlServiceExW({control})");
+
+        return status;
+    }
+
+    /// <summary>
     /// Reads the current configuration of a service.
     /// </summary>
     public static QUERY_SERVICE_CONFIG QueryServiceConfigHandle(ServiceHandle svcHandle)
@@ -859,6 +943,57 @@ public static class ServiceInteropHelper
         }
     }
 
+    /// <summary>
+    /// Sets the delayed auto-start flag for an automatic service.
+    /// </summary>
+    /// <param name="svcHandle">Handle to the service with SERVICE_CHANGE_CONFIG rights</param>
+    /// <param name="enable">true = delayed auto-start, false = normal auto-start</param>
+    public static void SetDelayedAutoStart(ServiceHandle svcHandle, bool enable)
+    {
+        if (svcHandle == null) 
+            throw new ArgumentNullException(nameof(svcHandle));
+
+        var info = new SERVICE_DELAYED_AUTO_START_INFO
+        {
+            fDelayedAutostart = enable
+        };
+
+        if (!ChangeServiceConfig2(svcHandle.Handle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, ref info))
+        {
+            ThrowLastWin32("ChangeServiceConfig2 (DelayedAutoStart)");
+        }
+    }
+
+    /// <summary>
+    /// Checks if a service is configured for delayed auto-start.
+    /// </summary>
+    public static bool GetDelayedAutoStart(ServiceHandle svcHandle)
+    {
+        if (svcHandle == null) 
+            throw new ArgumentNullException(nameof(svcHandle));
+
+        uint bytesNeeded;
+        // First call to get buffer size
+        QueryServiceConfig2(svcHandle.Handle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, IntPtr.Zero, 0, out bytesNeeded);
+
+        if (bytesNeeded == 0)
+            ThrowLastWin32("QueryServiceConfig2 (size)");
+
+        IntPtr buffer = Marshal.AllocHGlobal((int)bytesNeeded);
+        try
+        {
+            if (!QueryServiceConfig2(svcHandle.Handle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, buffer, bytesNeeded, out bytesNeeded))
+                ThrowLastWin32("QueryServiceConfig2");
+
+            var info = Marshal.PtrToStructure<SERVICE_DELAYED_AUTO_START_INFO>(buffer);
+            return info.fDelayedAutostart;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
     #endregion
 
     #region [Marshal Helpers]
@@ -876,7 +1011,7 @@ public static class ServiceInteropHelper
     /// </summary>
     public static void RunTests()
     {
-        // Example Usage (query an existing service config)
+        // **** Example Usage (query an existing service config) ****
         using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
         {
             using (var svc = ServiceInteropHelper.OpenServiceHandle(
@@ -900,7 +1035,7 @@ public static class ServiceInteropHelper
             }
         }
 
-        // Example Usage (check if running and then stop/start)
+        // **** Example Usage (check if running and then stop/start) ****
         using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
         {
             using (var svc = ServiceInteropHelper.OpenServiceHandle(
@@ -929,7 +1064,7 @@ public static class ServiceInteropHelper
             }
         }
 
-        // Example Usage (install service: admin privileges required)
+        // **** Example Usage (install service: admin privileges required) ****
         string binPath = @"D:\source\repos\BasicWindowsService\Debug\CSWindowsService.exe";
         if (System.IO.File.Exists(binPath))
         {
@@ -950,7 +1085,7 @@ public static class ServiceInteropHelper
             }
         }
 
-        // Example Usage (change service config)
+        // **** Example Usage (change service config) ****
         using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
         {
             using (var svc = ServiceInteropHelper.OpenServiceHandle(
@@ -971,6 +1106,46 @@ public static class ServiceInteropHelper
                     "Updated Display Name");
 
                 Con.WriteLine("Service configuration updated.");
+            }
+        }
+
+        // **** Example checking for auto-start-delayed ****
+        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
+        {
+            using (var svc = ServiceInteropHelper.OpenServiceHandle(
+                scm,
+                "BasicWindowService",
+                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_QUERY_CONFIG))
+            {
+                bool isDelayed = ServiceInteropHelper.GetDelayedAutoStart(svc);
+                Con.WriteLine(isDelayed ? "Service is Automatic (Delayed Start)" : "Service is not delayed");
+            }
+        }
+
+        // **** Example change to auto-start-delayed ****
+        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
+        {
+            using (var svc = ServiceInteropHelper.OpenServiceHandle(
+                scm,
+                "BasicWindowService",
+                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_CHANGE_CONFIG))
+            {
+                ServiceInteropHelper.SetDelayedAutoStart(svc, enable: true);
+                Con.WriteLine("Service updated to Automatic (Delayed Start).");
+            }
+        }
+
+        // **** General use case of retrieving extended SERVICE_STATUS_PROCESS. ****
+        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
+        {
+            using (var svc = ServiceInteropHelper.OpenServiceHandle(
+                scm,
+                "BasicWindowService",
+                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_STOP | 
+                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_INTERROGATE))
+            {
+                var status = ServiceInteropHelper.ControlServiceExHandle(svc, ServiceInteropHelper.SERVICE_CONTROL.SERVICE_CONTROL_INTERROGATE);
+                Con.WriteLine($"Service state: {status.dwCurrentState}, PID: {status.dwProcessId}");
             }
         }
     }
