@@ -51,12 +51,23 @@ public partial class App : Application
         { 
             msgBox.Owner = owner;
             msgBox.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            // Apply light blur effect on background/owner window
+            owner.Effect = new System.Windows.Media.Effects.BlurEffect()
+            {
+                KernelType = System.Windows.Media.Effects.KernelType.Gaussian,
+                Radius = 5
+            };
         }
         else 
         { 
             msgBox.WindowStartupLocation = WindowStartupLocation.CenterScreen; 
         }
         bool? result = msgBox.ShowDialog();
+
+        // Remove blur once closed
+        if (owner != null)
+            owner.Effect = null;
+
         return result == true;
     }
 
@@ -131,7 +142,7 @@ public partial class App : Application
     /// Can be called from any thread.
     /// </summary>
     public static void ShowDialog(string msg, string caption = "Notice") => ShowDialog(msg, caption, isWarning: false, shadows: true, modal: false, autoClose: default, autoFocus: false, assetName: "", assetOpacity: 0.5, owner: null);
-    public static void ShowDialog(string msg, string caption = "Notice", bool isWarning = false, bool shadows = true, bool modal = false, TimeSpan autoClose = default, bool autoFocus = false, string assetName = "", double assetOpacity = 0.4, Window? owner = null)
+    public static void ShowDialog(string msg, string caption = "Notice", bool isWarning = false, bool shadows = true, bool modal = false, TimeSpan autoClose = default, bool autoFocus = false, string assetName = "", double assetOpacity = 0.5, Window? owner = null)
     {
         try
         {

@@ -99,6 +99,8 @@ public class MainViewModel : INotifyPropertyChanged
     #region [Commands]
     public ICommand MinimizeCommand { get; set; }
     public ICommand MaximizeCommand { get; set; }
+    public ICommand CloseCommand { get; set; }
+    public ICommand DebugCommand { get; set; }
     #endregion
 
     public MainViewModel(Window window)
@@ -109,8 +111,10 @@ public class MainViewModel : INotifyPropertyChanged
 
         CurrentCulture = System.Threading.Thread.CurrentThread.CurrentUICulture;
 
+        CloseCommand = new RelayCommand(() => _window.Close());
         MinimizeCommand = new RelayCommand(() => _window.WindowState = WindowState.Minimized);
         MaximizeCommand = new RelayCommand(() => _window.WindowState ^= WindowState.Maximized);
+        DebugCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"{App.RuntimeInfo}"); });
 
         #region [Control Events]
         EventManager.RegisterClassHandler(typeof(TextBox), TextBox.GotFocusEvent, new RoutedEventHandler(TextBox_GotFocus));
@@ -145,8 +149,11 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         // EventBus demonstration
-        if (!App.RootEventBus.IsSubscribed(Constants.EB_Notice))
-            App.RootEventBus.Subscribe(Constants.EB_Notice, EventBusMessageHandler);
+        if (!App.RootEventBus.IsSubscribed(Constants.EB_ToModel))
+            App.RootEventBus.Subscribe(Constants.EB_ToModel, EventBusMessageHandler);
+
+        Debug.WriteLine($"[INFO] Model initialized with {_modelDependencies.Count} dependency properties.");
+        Debug.WriteLine($"[INFO] {CloseCommand}");
     }
 
     #region [Core Methods]

@@ -32,6 +32,7 @@
     -->
 
     <Border
+        x:Name="hostBorder"
         MinWidth="350"
         MinHeight="150"
         Margin="10"
@@ -39,8 +40,7 @@
         Background="{StaticResource ExtraDarkBrush}"
         BorderBrush="{StaticResource NormalBrush}"
         BorderThickness="2"
-        CornerRadius="5"
-        MouseDown="MainControl_MouseDown">
+        CornerRadius="5">
         <Border.Effect>
             <DropShadowEffect
                 BlurRadius="6"
@@ -50,169 +50,247 @@
                 Color="{StaticResource BackgroundDark}" />
         </Border.Effect>
 
-        <DockPanel>
-            <StackPanel
-                MinWidth="850"
-                Margin="0"
-                VerticalAlignment="Stretch"
-                DockPanel.Dock="Top"
-                Orientation="Horizontal">
-                <!--<Button
-                    x:Name="btnSpin"
-                    Height="30"
-                    Margin="-2,-2,2,0"
-                    VerticalAlignment="Top"
-                    Click="Spinner_Click"
-                    Opacity="0.9"
-                    Style="{StaticResource SpinButton}"
-                    Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
-                    <Button.Tag>
-                        <ImageSource>/Assets/Spinner5.png</ImageSource>
-                    </Button.Tag>
-                </Button>-->
-                <TextBlock
-                    x:Name="tbStatus"
-                    MinWidth="800"
-                    MinHeight="30"
-                    Margin="10,4,5,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    FontSize="18"
-                    Foreground="{StaticResource TitleBrush}"
-                    Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
-                <!--
-                <ctrl:TrackRing
-                    Width="40"
-                    Height="40"
-                    Margin="20,0,0,0"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Foreground="{StaticResource DotsBrush}"
-                    IsActive="{Binding IsBusy, Mode=OneWay}" />
-                -->
-                <ctrl:DotAnimation
-                    Width="70"
-                    Height="20"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Center"
-                    DotDuration="0.6"
-                    DotMinimum="0.6"
-                    DotOpacity="0.7"
-                    DotRadius="10"
-                    DotSize="16"
-                    DotSpacing="5.5"
-                    FillColor="{StaticResource DotsBrush}"
-                    IsRunning="{Binding IsBusy, Mode=OneWay, FallbackValue=true}" />
-            </StackPanel>
-
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="22" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
             <Border
-                x:Name="Border"
-                Margin="10,5,10,0"
-                Padding="0"
-                Background="Transparent"
-                BorderBrush="{StaticResource NormalDarkBrush}"
-                BorderThickness="0"
-                CornerRadius="3"
-                DockPanel.Dock="Top">
-                <ListBox
-                    x:Name="AppList"
-                    MinWidth="680"
-                    MinHeight="360"
-                    MaxHeight="360"
-                    Margin="0"
-                    Background="Transparent"
-                    BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate DataType="{x:Type local:RestoreItem}">
-                            <Border
-                                x:Name="Border"
-                                Margin="1"
-                                Padding="8"
-                                BorderBrush="{StaticResource NormalDarkBrush}"
-                                BorderThickness="1"
-                                CornerRadius="3">
-                                <Border.Effect>
-                                    <DropShadowEffect
-                                        BlurRadius="3"
-                                        Direction="310"
-                                        Opacity="0.5"
-                                        ShadowDepth="3"
-                                        Color="{StaticResource BackgroundDark}" />
-                                </Border.Effect>
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox
-                                        Margin="0"
-                                        VerticalAlignment="Center"
-                                        VerticalContentAlignment="Center"
-                                        Content="{Binding Location}"
-                                        FontSize="14"
-                                        Foreground="{StaticResource NormalBrush}"
-                                        IsChecked="True"
-                                        ToolTipService.ToolTip="Application Path" />
-                                    <Image
-                                        Width="24"
-                                        Margin="15,0,0,0"
-                                        Cursor="Hand"
-                                        MouseDown="Favorite_MouseDown"
-                                        RenderOptions.BitmapScalingMode="Fant"
-                                        Source="{Binding Favorite, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource boolToImage}}"
-                                        ToolTipService.ToolTip="Toggle Favorite" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                x:Name="titleBar"
+                Grid.Row="0"
+                MinWidth="850"
+                Margin="-20,0,-20,0"
+                BorderBrush="{StaticResource TitleBrushBar}"
+                BorderThickness="0,0,0,2"
+                CornerRadius="5">
+                <StackPanel
+                    VerticalAlignment="Stretch"
+                    Orientation="Horizontal"
+                    ToolTipService.ToolTip="click &amp; drag to move window">
+                    <TextBlock
+                        MinWidth="840"
+                        MinHeight="30"
+                        Margin="12,-12,0,0"
+                        FontSize="20"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource TitleBrush}"
+                        Text="App Restorer">
+                        <TextBlock.Effect>
+                            <DropShadowEffect
+                                BlurRadius="3"
+                                Direction="310"
+                                Opacity="0.6"
+                                ShadowDepth="3"
+                                Color="{StaticResource BackgroundDark}" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <Button
+                        Width="26"
+                        Height="18"
+                        Margin="2,-6,0,0"
+                        Padding="0"
+                        VerticalAlignment="Top"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Top"
+                        Command="{Binding MinimizeCommand, Mode=OneWay}"
+                        Content="─"
+                        FontSize="18"
+                        Template="{StaticResource ReformedButton}"
+                        ToolTipService.ToolTip="minimize" />
+                    <Button
+                        Width="26"
+                        Height="18"
+                        Margin="2,-6,0,0"
+                        Padding="0"
+                        VerticalAlignment="Top"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Top"
+                        Command="{Binding CloseCommand, Mode=OneWay}"
+                        Content="✕"
+                        FontSize="18"
+                        Template="{StaticResource ReformedButton}"
+                        ToolTipService.ToolTip="close" />
+                </StackPanel>
             </Border>
 
-            <!--#region [Controls]-->
-            <StackPanel
-                Margin="10,20,10,-12"
-                HorizontalAlignment="Stretch"
-                DockPanel.Dock="Bottom"
-                Orientation="Horizontal">
-                <Button
-                    Width="150"
-                    Height="44"
-                    Margin="4,2"
-                    Click="Restore_Click"
-                    Content="Restore Selected"
-                    FontSize="15"
-                    Template="{StaticResource ReformedButton}" />
-                <Button
-                    Width="150"
-                    Height="44"
-                    Margin="4,2"
-                    Click="Invert_Click"
-                    Content="Invert Selections"
-                    FontSize="15"
-                    Template="{StaticResource ReformedButton}" />
-                <Button
-                    Width="150"
-                    Height="44"
-                    Margin="4,2"
-                    Click="Minimize_Click"
-                    Content="Minimize"
-                    FontSize="15"
-                    Template="{StaticResource ReformedButton}" />
-                <Button
-                    x:Name="ButtonBackup"
-                    Width="150"
-                    Height="44"
-                    Margin="4,2"
-                    Click="LoadBackup_Click"
-                    Content="Load Backup"
-                    FontSize="15"
-                    Template="{StaticResource ReformedButton}" />
-                <Button
-                    Width="150"
-                    Height="44"
-                    Margin="4,2"
-                    Click="Close_Click"
-                    Content="Close"
-                    FontSize="15"
-                    Template="{StaticResource ReformedButton}" />
-            </StackPanel>
-            <!--#endregion-->
-        </DockPanel>
+            <DockPanel Grid.Row="1">
+                <StackPanel
+                    MinWidth="890"
+                    Margin="0"
+                    VerticalAlignment="Stretch"
+                    DockPanel.Dock="Top"
+                    Orientation="Horizontal">
+                    <!--
+                    <Button
+                        x:Name="btnSpin"
+                        Height="30"
+                        Margin="-2,-2,2,0"
+                        VerticalAlignment="Top"
+                        Click="Spinner_Click"
+                        Opacity="0.9"
+                        Style="{StaticResource SpinButton}"
+                        Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}">
+                        <Button.Tag>
+                            <ImageSource>/Assets/Spinner5.png</ImageSource>
+                        </Button.Tag>
+                    </Button>
+                    -->
+                    <TextBlock
+                        x:Name="tbStatus"
+                        MinWidth="810"
+                        MinHeight="30"
+                        Margin="10,10,5,0"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        FontSize="18"
+                        Foreground="{StaticResource TitleBrush}"
+                        Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
+
+
+                    <!--
+                    <ctrl:TestControl />
+                    -->
+
+                    <!--
+                    <ctrl:TrackRing
+                        Width="40"
+                        Height="40"
+                        Margin="20,0,0,0"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource DotsBrush}"
+                        IsActive="{Binding IsBusy, Mode=OneWay}" />
+                    -->
+                    <!--
+                    <ctrl:RingSpinner
+                        Width="40"
+                        Height="3"
+                        HorizontalAlignment="Center"
+                        RingBrush="{StaticResource DotsBrush}"
+                        RingRadius="2"
+                        RingRatio="10"
+                        RingThickness="1" />
+                    -->
+                    <ctrl:DotAnimation
+                        x:Name="spinner"
+                        Width="68"
+                        Height="20"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        DotDuration="0.7"
+                        DotMinimum="0.6"
+                        DotOpacity="0.8"
+                        DotRadius="8"
+                        DotSize="16"
+                        DotSpacing="8"
+                        FillColor="{StaticResource DotsBrush}"
+                        IsRunning="{Binding IsBusy, Mode=OneWay, FallbackValue=true}"
+                        MouseDownCommand="{Binding DebugCommand, Mode=OneWay}">
+                        <ctrl:DotAnimation.Easing>
+                            <PowerEase EasingMode="EaseOut" Power="0.95" />
+                            <!--<CircleEase EasingMode="EaseOut" />-->
+                            <!--<SineEase EasingMode="EaseInOut" />-->
+                            <!--<QuinticEase EasingMode="EaseInOut" />-->
+                            <!--<QuadraticEase EasingMode="EaseInOut" />-->
+                            <!--<ExponentialEase EasingMode="EaseInOut" />-->
+                            <!--<BackEase Amplitude="0.25" EasingMode="EaseInOut" />-->
+                        </ctrl:DotAnimation.Easing>
+                    </ctrl:DotAnimation>
+                </StackPanel>
+
+                <Border
+                    x:Name="Border"
+                    Margin="10,5,10,0"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderBrush="{StaticResource NormalDarkBrush}"
+                    BorderThickness="0"
+                    CornerRadius="3"
+                    DockPanel.Dock="Top">
+                    <ListBox
+                        x:Name="AppList"
+                        MinWidth="870"
+                        MinHeight="360"
+                        MaxHeight="360"
+                        Margin="0"
+                        Background="Transparent"
+                        BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type local:RestoreItem}">
+                                <Border
+                                    x:Name="Border"
+                                    Margin="1"
+                                    Padding="8"
+                                    BorderBrush="{StaticResource NormalDarkBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="3">
+                                    <Border.Effect>
+                                        <DropShadowEffect
+                                            BlurRadius="3"
+                                            Direction="310"
+                                            Opacity="0.5"
+                                            ShadowDepth="3"
+                                            Color="{StaticResource BackgroundDark}" />
+                                    </Border.Effect>
+                                    <StackPanel Orientation="Horizontal">
+                                        <CheckBox
+                                            Margin="0"
+                                            VerticalAlignment="Center"
+                                            VerticalContentAlignment="Center"
+                                            Content="{Binding Location}"
+                                            FontSize="14"
+                                            Foreground="{StaticResource NormalBrush}"
+                                            IsChecked="True"
+                                            ToolTipService.ToolTip="Application Path" />
+                                        <Image
+                                            Width="24"
+                                            Margin="15,0,0,0"
+                                            Cursor="Hand"
+                                            MouseDown="Favorite_MouseDown"
+                                            RenderOptions.BitmapScalingMode="Fant"
+                                            Source="{Binding Favorite, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource boolToImage}}"
+                                            ToolTipService.ToolTip="Toggle Favorite" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+
+                <!--#region [Controls]-->
+                <StackPanel
+                    Margin="10,10,10,-12"
+                    HorizontalAlignment="Stretch"
+                    DockPanel.Dock="Bottom"
+                    Orientation="Horizontal">
+                    <Button
+                        Width="240"
+                        Height="44"
+                        Margin="4,2"
+                        Click="Restore_Click"
+                        Content="Restore Selected"
+                        FontSize="15"
+                        Template="{StaticResource ReformedButton}" />
+                    <Button
+                        Width="240"
+                        Height="44"
+                        Margin="4,2"
+                        Click="Invert_Click"
+                        Content="Invert Selections"
+                        FontSize="15"
+                        Template="{StaticResource ReformedButton}" />
+                    <Button
+                        x:Name="ButtonBackup"
+                        Width="240"
+                        Height="44"
+                        Margin="4,2"
+                        Click="LoadBackup_Click"
+                        Content="Load Backup"
+                        FontSize="15"
+                        Template="{StaticResource ReformedButton}" />
+                </StackPanel>
+                <!--#endregion-->
+            </DockPanel>
+        </Grid>
     </Border>
 </Window>

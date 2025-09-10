@@ -190,6 +190,7 @@ public static class ServiceInterop
 
                 if (isRunning && stopIfRunning)
                 {
+                    App.RootEventBus?.Publish(Constants.EB_ToWindow, $"Stopping service {serviceName}");
                     Extensions.WriteToLog($"Stopping service '{serviceName}'");
                     StopService(serviceName, machineName);
                 }
@@ -368,35 +369,52 @@ public static class ServiceInteropHelper
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-startservicew
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool StartService(IntPtr hService, int dwNumServiceArgs, string[] lpServiceArgVectors);
+    internal static extern bool StartService(
+        IntPtr hService, 
+        int dwNumServiceArgs, 
+        string[] lpServiceArgVectors);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-deleteservice
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool DeleteService(IntPtr hService);
+    internal static extern bool DeleteService(
+        IntPtr hService);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-openservicew
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    internal static extern IntPtr OpenService(IntPtr hSCManager, string lpServiceName, SERVICE_ACCESS dwDesiredAccess);
+    internal static extern IntPtr OpenService(
+        IntPtr hSCManager, 
+        string lpServiceName, 
+        SERVICE_ACCESS dwDesiredAccess);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-openscmanagerw
     [DllImport("advapi32.dll", EntryPoint = "OpenSCManagerW", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
-    internal static extern IntPtr OpenSCManager(string machineName, string databaseName, SCM_ACCESS dwDesiredAccess);
+    internal static extern IntPtr OpenSCManager(
+        string machineName, 
+        string databaseName, 
+        SCM_ACCESS dwDesiredAccess);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-closeservicehandle
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool CloseServiceHandle(IntPtr hSCObject);
+    internal static extern bool CloseServiceHandle(
+        IntPtr hSCObject);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-controlservice
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool ControlService(IntPtr hService, SERVICE_CONTROL dwControl, ref SERVICE_STATUS lpServiceStatus);
+    internal static extern bool ControlService(
+        IntPtr hService, 
+        SERVICE_CONTROL dwControl, 
+        ref SERVICE_STATUS lpServiceStatus);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-queryservicestatus
     [DllImport("advapi32.dll", EntryPoint = "QueryServiceStatus", CharSet = CharSet.Auto)]
-    internal static extern bool QueryServiceStatus(IntPtr hService, ref SERVICE_STATUS dwServiceStatus);
+    internal static extern bool QueryServiceStatus(
+        IntPtr hService, 
+        ref SERVICE_STATUS dwServiceStatus);
 
+    // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-queryserviceconfig2w
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool QueryServiceConfig2(
@@ -408,7 +426,9 @@ public static class ServiceInteropHelper
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-setservicestatus
     [DllImport("advapi32.dll")]
-    internal static extern bool SetServiceStatus(IntPtr hServiceStatus, ref SERVICE_STATUS lpServiceStatus);
+    internal static extern bool SetServiceStatus(
+        IntPtr hServiceStatus, 
+        ref SERVICE_STATUS lpServiceStatus);
 
     // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-createservicew
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -457,6 +477,7 @@ public static class ServiceInteropHelper
         string lpPassword,
         string lpDisplayName);
 
+    // https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-changeserviceconfig2w
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ChangeServiceConfig2(
@@ -547,7 +568,6 @@ public static class ServiceInteropHelper
         SERVICE_CONTROL_INTERROGATE = 0x00000004,
         SERVICE_CONTROL_SHUTDOWN = 0x00000005,
         SERVICE_CONTROL_PARAMCHANGE = 0x00000006,
-
         // custom user-defined controls 128-255
     }
 
@@ -1026,12 +1046,38 @@ public static class ServiceInteropHelper
                 Con.WriteLine($"Run As: {config.lpServiceStartName}");
                 Con.WriteLine($"Display Name: {config.lpDisplayName}");
                 /*
-                  Service Type: 272
+                  Service Type: 272 (SERVICE_WIN32_OWN_PROCESS + SERVICE_INTERACTIVE_PROCESS)
                   Start Type: 3
                   Binary Path: D:\source\repos\BasicWindowsService\Debug\CSWindowsService.exe
                   Run As: LocalSystem
                   Display Name: BasicWindowService
                 */
+            }
+        }
+
+        // **** Example checking for auto-start-delayed ****
+        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
+        {
+            using (var svc = ServiceInteropHelper.OpenServiceHandle(
+                scm,
+                "BasicWindowService",
+                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_QUERY_CONFIG))
+            {
+                bool isDelayed = ServiceInteropHelper.GetDelayedAutoStart(svc);
+                Con.WriteLine(isDelayed ? "Service is Automatic (Delayed Start)" : "Service is not delayed");
+            }
+        }
+
+        // **** Example change to auto-start-delayed ****
+        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
+        {
+            using (var svc = ServiceInteropHelper.OpenServiceHandle(
+                scm,
+                "BasicWindowService",
+                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_CHANGE_CONFIG))
+            {
+                ServiceInteropHelper.SetDelayedAutoStart(svc, enable: true);
+                Con.WriteLine("Service updated to Automatic (Delayed Start).");
             }
         }
 
@@ -1106,32 +1152,6 @@ public static class ServiceInteropHelper
                     "Updated Display Name");
 
                 Con.WriteLine("Service configuration updated.");
-            }
-        }
-
-        // **** Example checking for auto-start-delayed ****
-        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
-        {
-            using (var svc = ServiceInteropHelper.OpenServiceHandle(
-                scm,
-                "BasicWindowService",
-                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_QUERY_CONFIG))
-            {
-                bool isDelayed = ServiceInteropHelper.GetDelayedAutoStart(svc);
-                Con.WriteLine(isDelayed ? "Service is Automatic (Delayed Start)" : "Service is not delayed");
-            }
-        }
-
-        // **** Example change to auto-start-delayed ****
-        using (var scm = ServiceInteropHelper.OpenSCManagerLocal())
-        {
-            using (var svc = ServiceInteropHelper.OpenServiceHandle(
-                scm,
-                "BasicWindowService",
-                ServiceInteropHelper.SERVICE_ACCESS.SERVICE_CHANGE_CONFIG))
-            {
-                ServiceInteropHelper.SetDelayedAutoStart(svc, enable: true);
-                Con.WriteLine("Service updated to Automatic (Delayed Start).");
             }
         }
 

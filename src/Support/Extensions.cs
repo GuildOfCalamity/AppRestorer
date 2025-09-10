@@ -1563,6 +1563,96 @@ public static class Extensions
         }
         catch (Exception) { return results; }
     }
+
+    /// <summary>
+    /// Removes an element from the middle of a queue without disrupting the other elements.
+    /// </summary>
+    /// <typeparam name="T">The element to remove.</typeparam>
+    /// <param name="queue">The queue to modify.</param>
+    /// <param name="valueToRemove">The value to remove.</param>
+    /// <returns>
+    /// <see langword="true"/> if the value was found and removed, <see langword="false"/> if no match was found.
+    /// </returns>
+    /// <remarks>
+    /// If a value appears multiple times in the queue, only its first entry is removed.<br/>
+    /// This method could be costly if the queue is extremely large.
+    /// </remarks>
+    public static bool RemoveFromQueue<T>(this Queue<T> queue, T valueToRemove) where T : class
+    {
+        if (valueToRemove == null)
+            throw new ArgumentNullException(nameof(valueToRemove));
+        if (queue == null)
+            throw new ArgumentNullException(nameof(queue));
+        if (queue.Count == 0)
+            return false;
+
+        bool found = false;
+        int originalCount = queue.Count;
+        int dequeueCounter = 0;
+        while (dequeueCounter < originalCount)
+        {
+            dequeueCounter++;
+            T dequeued = queue.Dequeue();
+            if (!found && dequeued == valueToRemove)
+            { 
+                // don't enqueue since the goal is to remove
+                found = true;
+            }
+            else
+            {
+                queue.Enqueue(dequeued);
+            }
+        }
+        return found;
+    }
+    /// <summary>
+    /// Removes an element from the middle of a queue without disrupting the other elements.
+    /// </summary>
+    /// <typeparam name="T">The element to remove.</typeparam>
+    /// <param name="queue">The queue to modify.</param>
+    /// <param name="valueToRemove">The value to remove.</param>
+    /// <returns>
+    /// <see langword="true"/> if the value was found and removed, <see langword="false"/> if no match was found.
+    /// </returns>
+    /// <remarks>
+    /// If a value appears multiple times in the queue, only its first entry is removed.<br/>
+    /// This method could be costly if the queue is extremely large.
+    /// </remarks>
+    public static bool RemoveFromQueue<T>(this ConcurrentQueue<T> queue, T valueToRemove) where T : class
+    {
+        if (valueToRemove == null)
+            throw new ArgumentNullException(nameof(valueToRemove));
+        if (queue == null)
+            throw new ArgumentNullException(nameof(queue));
+        if (queue.IsEmpty)
+            return false;
+
+        bool found = false;
+        int originalCount = queue.Count;
+        int dequeueCounter = 0;
+        int failCounter = 0;
+        while (dequeueCounter < originalCount && failCounter < 50)
+        {
+            if (queue.TryDequeue(out T? dequeued))
+            {
+                dequeueCounter++;
+                if (!found && dequeued != null && dequeued == valueToRemove)
+                {
+                    // don't enqueue since the goal is to remove
+                    found = true;
+                }
+                else if (dequeued != null)
+                {
+                    queue.Enqueue(dequeued);
+                }
+            }
+            else
+            {
+                failCounter++;
+            }
+        }
+        return found;
+    }
 }
 
 /// <summary>

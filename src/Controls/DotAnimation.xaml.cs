@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -29,7 +30,8 @@ public partial class DotAnimation : UserControl
         new PropertyMetadata(4d, OnDotRadiusChanged));
 
     /// <summary>
-    /// DotMinimum Dependency Property
+    /// DotMinimum Dependency Property. 
+    /// A percentage of how small the resting size should be in relation to the expanded size.
     /// </summary>
     public double DotMinimum
     {
@@ -97,7 +99,7 @@ public partial class DotAnimation : UserControl
         nameof(DotOpacity),
         typeof(double),
         typeof(DotAnimation),
-        new PropertyMetadata(1.0d, OnDotOpacityChanged));
+        new PropertyMetadata(0.9d, OnDotOpacityChanged));
 
     /// <summary>
     /// IsRunning Dependency Property
@@ -132,6 +134,77 @@ public partial class DotAnimation : UserControl
         typeof(Brush),
         typeof(DotAnimation),
         new PropertyMetadata(Brushes.White));
+
+    /// <summary>
+    /// Easing Dependency Property
+    /// </summary>
+    public static readonly DependencyProperty EasingProperty = DependencyProperty.Register(
+    nameof(Easing),
+    typeof(IEasingFunction),
+    typeof(DotAnimation),
+    new PropertyMetadata(new QuadraticEase() { EasingMode = EasingMode.EaseInOut }, OnEasingChanged));
+    public IEasingFunction Easing
+    {
+        get { return (IEasingFunction)this.GetValue(EasingProperty); }
+        set { this.SetValue(EasingProperty, value); }
+    }
+    static void OnEasingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = d as DotAnimation;
+        if (control == null)
+            return;
+
+        var easing = (IEasingFunction)e.NewValue;
+        if (easing == null)
+            return;
+
+        control.Easing = easing;
+        if (control.IsRunning)
+        {
+            control.dotAnimationStoryboard?.Stop(control);
+            control.CreateDotAnimationStoryboard(control.Easing);
+            control.dotAnimationStoryboard?.Begin(control, true);
+        }
+        else
+        {
+            control.CreateDotAnimationStoryboard(control.Easing);
+        }
+    }
+
+    public static readonly DependencyProperty MouseDownCommandProperty =
+       DependencyProperty.Register(
+           "MouseDownCommand",
+           typeof(ICommand),
+           typeof(DotAnimation),
+           new PropertyMetadata(null, OnMouseDownCommandChanged));
+
+    public ICommand MouseDownCommand
+    {
+        get { return (ICommand)GetValue(MouseDownCommandProperty); }
+        set { SetValue(MouseDownCommandProperty, value); }
+    }
+    #endregion
+
+    #region [Exposing a custom MouseDown event]
+    public static readonly RoutedEvent MouseDownEvent =
+        EventManager.RegisterRoutedEvent(
+            "MouseDown",
+            RoutingStrategy.Bubble, // route upwards through the visual tree
+            typeof(MouseButtonEventHandler),
+            typeof(DotAnimation));
+    public event MouseButtonEventHandler MouseDown
+    {
+        add { AddHandler(MouseDownEvent, value); }
+        remove { RemoveHandler(MouseDownEvent, value); }
+    }
+    void Grid_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // Raise the routed event
+        RaiseEvent(new MouseButtonEventArgs(e.MouseDevice, e.Timestamp, e.ChangedButton)
+        {
+            RoutedEvent = MouseDownEvent
+        });
+    }
     #endregion
 
     #region [Property Changed Callbacks]
@@ -145,7 +218,6 @@ public partial class DotAnimation : UserControl
 
         if (IsRunning)
         {
-            Dot1.Opacity = Dot2.Opacity = Dot3.Opacity = Dot4.Opacity = 0.9;
             Visibility = Visibility.Visible;
             dotAnimationStoryboard?.Begin(this, true);
         }
@@ -186,12 +258,12 @@ public partial class DotAnimation : UserControl
             if (control.IsRunning)
             {
                 control.dotAnimationStoryboard?.Stop(control);
-                control.CreateDotAnimationStoryboard(cs);
+                control.CreateDotAnimationStoryboard(control.Easing, cs);
                 control.dotAnimationStoryboard?.Begin(control, true);
             }
             else
             {
-                control.CreateDotAnimationStoryboard(cs);
+                control.CreateDotAnimationStoryboard(control.Easing, cs);
             }
         }
         else
@@ -239,6 +311,8 @@ public partial class DotAnimation : UserControl
             Dot3.RadiusX = Dot3.RadiusY = corner;
             Dot4.Width = Dot4.Height = size;
             Dot4.RadiusX = Dot4.RadiusY = corner;
+            Dot5.Width = Dot5.Height = size;
+            Dot5.RadiusX = Dot5.RadiusY = corner;
         }
     }
 
@@ -251,12 +325,12 @@ public partial class DotAnimation : UserControl
             if (control.IsRunning)
             {
                 control.dotAnimationStoryboard?.Stop(control);
-                control.CreateDotAnimationStoryboard();
+                control.CreateDotAnimationStoryboard(control.Easing);
                 control.dotAnimationStoryboard?.Begin(control, true);
             }
             else
             {
-                control.CreateDotAnimationStoryboard();
+                control.CreateDotAnimationStoryboard(control.Easing);
             }
         }
         else
@@ -278,6 +352,7 @@ public partial class DotAnimation : UserControl
             control.Dot2.RadiusX = control.Dot2.RadiusY = cs;
             control.Dot3.RadiusX = control.Dot3.RadiusY = cs;
             control.Dot4.RadiusX = control.Dot4.RadiusY = cs;
+            control.Dot5.RadiusX = control.Dot5.RadiusY = cs;
             
             if (control.IsRunning)
                 control.dotAnimationStoryboard?.Begin(control, true);
@@ -289,16 +364,42 @@ public partial class DotAnimation : UserControl
             Debug.WriteLine($"[WARNING] e.NewValue is null or is not the correct type.");
         }
     }
+
+    static void OnMouseDownCommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is DotAnimation control)
+        {
+            control.UpdateMouseDownCommandEvent();
+        }
+    }
+    void UpdateMouseDownCommandEvent()
+    {
+        if (MouseDownCommand != null)
+            hostGrid.MouseDown += HostGridOnMouseDown;
+        else
+            hostGrid.MouseDown -= HostGridOnMouseDown;
+    }
+    void HostGridOnMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (MouseDownCommand != null && MouseDownCommand.CanExecute(e))
+            MouseDownCommand.Execute(e);
+    }
     #endregion
 
     public DotAnimation()
     {
         InitializeComponent();
-        CreateDotAnimationStoryboard();
+        UpdateMouseDownCommandEvent(); // Ensure event handler is set initially
+        CreateDotAnimationStoryboard(new QuadraticEase());
+        
         Loaded += (s, e) =>
         {   
             UpdateAnimationState(); // Initialize state based on IsRunning property.
         };
+        
+        // If not using ICommand then wire-up basic event handler.
+        if (MouseDownCommand == null)
+            hostGrid.MouseDown += Grid_MouseDown;
     }
 
     public override void OnApplyTemplate()
@@ -316,6 +417,7 @@ public partial class DotAnimation : UserControl
         Dot2.RadiusX = Dot2.RadiusY = DotRadius;
         Dot3.RadiusX = Dot3.RadiusY = DotRadius;
         Dot4.RadiusX = Dot4.RadiusY = DotRadius;
+        Dot5.RadiusX = Dot5.RadiusY = DotRadius;
         return base.MeasureOverride(availableSize);
     }
 
@@ -323,19 +425,25 @@ public partial class DotAnimation : UserControl
     /// <summary>
     /// Create the DotAnimationStoryboard programmatically
     /// </summary>
-    void CreateDotAnimationStoryboard(double seconds = defaultDuration)
+    void CreateDotAnimationStoryboard(IEasingFunction easing, double seconds = defaultDuration)
     {
+        if (dotAnimationStoryboard != null)
+            dotAnimationStoryboard?.Children?.Clear();
+
         dotAnimationStoryboard = new Storyboard { RepeatBehavior = RepeatBehavior.Forever };
         Duration duration = new Duration(TimeSpan.FromSeconds(seconds));
-        AddDotAnimations(Dot1, TimeSpan.FromSeconds(0), duration);
-        AddDotAnimations(Dot2, TimeSpan.FromSeconds(0.25), duration);
-        AddDotAnimations(Dot3, TimeSpan.FromSeconds(0.5), duration);
-        AddDotAnimations(Dot4, TimeSpan.FromSeconds(0.75), duration);
+        AddDotAnimations(Dot1, TimeSpan.FromSeconds(0.0), duration, easing);
+        AddDotAnimations(Dot2, TimeSpan.FromSeconds(0.2), duration, easing);
+        AddDotAnimations(Dot3, TimeSpan.FromSeconds(0.4), duration, easing);
+        AddDotAnimations(Dot4, TimeSpan.FromSeconds(0.6), duration, easing);
+        AddDotAnimations(Dot5, TimeSpan.FromSeconds(0.8), duration, easing);
     }
 
     void UpdateOpacity(double opacity)
     {
-        Dot1.Opacity = Dot2.Opacity = Dot3.Opacity = Dot4.Opacity = opacity;
+        Debug.WriteLine($"[INFO] Updating {nameof(DotOpacity)} to {opacity}");
+        // Each rectangle should inherit from the host's opacity, but just to be thorough:
+        hostGrid.Opacity = Dot1.Opacity = Dot2.Opacity = Dot3.Opacity = Dot4.Opacity = Dot5.Opacity = opacity;
     }
 
     /// <summary>
@@ -344,7 +452,7 @@ public partial class DotAnimation : UserControl
     /// <param name="dot"></param>
     /// <param name="beginTime"></param>
     /// <param name="duration"></param>
-    void AddDotAnimations(UIElement dot, TimeSpan beginTime, Duration duration)
+    void AddDotAnimations(UIElement dot, TimeSpan beginTime, Duration duration, IEasingFunction easing)
     {
         // Ensure each dot has a ScaleTransform applied
         var scaleTransform = new ScaleTransform(minimumScale, minimumScale);
@@ -355,11 +463,11 @@ public partial class DotAnimation : UserControl
         var scaleXAnimation = new DoubleAnimation
         {
             From = minimumScale,
-            To = 1,
+            To = 1.09,
             Duration = duration,
             AutoReverse = true,
             BeginTime = beginTime,
-            EasingFunction = new QuadraticEase()
+            EasingFunction = easing
         };
         Storyboard.SetTarget(scaleXAnimation, dot);
         Storyboard.SetTargetProperty(scaleXAnimation, new PropertyPath("RenderTransform.ScaleX"));
@@ -370,11 +478,11 @@ public partial class DotAnimation : UserControl
         var scaleYAnimation = new DoubleAnimation
         {
             From = minimumScale,
-            To = 1,
+            To = 1.09,
             Duration = duration,
             AutoReverse = true,
             BeginTime = beginTime,
-            EasingFunction = new QuadraticEase()
+            EasingFunction = easing
         };
         Storyboard.SetTarget(scaleYAnimation, dot);
         Storyboard.SetTargetProperty(scaleYAnimation, new PropertyPath("RenderTransform.ScaleY"));

@@ -2,6 +2,9 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup />
   <ItemGroup>
+    <Compile Update="Controls\TestControl.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="MessageBoxWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>

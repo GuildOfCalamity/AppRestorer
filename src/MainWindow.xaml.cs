@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using AppRestorer.Controls;
 
 namespace AppRestorer;
 
@@ -50,7 +51,7 @@ public partial class MainWindow : Window
         Debug.WriteLine($"{System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{System.Reflection.MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
 
         InitializeComponent();
-
+        
         // We'll pass the MainWindow to the VM so common Window events will become simpler to work with.
         this.DataContext = new MainViewModel(this);
 
@@ -61,6 +62,12 @@ public partial class MainWindow : Window
             Debug.WriteLine("[INFO] XAML system is in design mode.");
         else
             Debug.WriteLine("[INFO] XAML system is not in design mode.");
+
+        #region [Control drag events]
+        titleBar.AddHandler(UIElement.MouseDownEvent, new MouseButtonEventHandler(MainControl_MouseDown), handledEventsToo: false);
+        titleBar.AddHandler(UIElement.MouseEnterEvent, new MouseEventHandler(MainControl_MouseEnter), handledEventsToo: false);
+        titleBar.AddHandler(UIElement.MouseLeaveEvent, new MouseEventHandler(MainControl_MouseLeave), handledEventsToo: false);
+        #endregion
 
         #region [Persistent settings]
         ConfigManager.OnError += (sender, ex) => 
@@ -116,6 +123,10 @@ public partial class MainWindow : Window
         };
         _timer.Start();
         #endregion
+
+        // EventBus demonstration
+        if (!App.RootEventBus.IsSubscribed(Constants.EB_ToWindow))
+            App.RootEventBus.Subscribe(Constants.EB_ToWindow, EventBusMessageHandler);
     }
 
     #region [Events]
@@ -133,7 +144,7 @@ public partial class MainWindow : Window
             ButtonBackup.IsEnabled = false;
 
         // EventBus demonstration
-        App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Activated: {this.WindowState}");
+        App.RootEventBus?.Publish(Constants.EB_ToModel, $"MainWindow_Activated: {this.WindowState}");
     }
 
     void Window_Deactivated(object sender, EventArgs e)
@@ -141,7 +152,7 @@ public partial class MainWindow : Window
         _vm!.IsBusy = false;
 
         // EventBus demonstration
-        App.RootEventBus?.Publish(Constants.EB_Notice, $"MainWindow_Deactivated: {this.WindowState}");
+        App.RootEventBus?.Publish(Constants.EB_ToModel, $"MainWindow_Deactivated: {this.WindowState}");
     }
 
     void Window_Loaded(object sender, RoutedEventArgs e)
@@ -274,6 +285,7 @@ public partial class MainWindow : Window
                 var checkBox = FindVisualChild<CheckBox>(container);
                 if (checkBox != null && checkBox.IsChecked == true && ri != null)
                 {
+                    // Don't allow duplicates
                     if (IsAppRunning($"{ri.Location}"))
                     {
                         UpdateText(tbStatus, $"Already running '{ri.Location}'");
@@ -326,8 +338,13 @@ public partial class MainWindow : Window
         Cursor = Cursors.Arrow;
     }
 
+    void MainControl_MouseLeave(object sender, MouseEventArgs e) => this.Cursor = Cursors.Arrow;
+
+    void MainControl_MouseEnter(object sender, MouseEventArgs e) => this.Cursor = Cursors.Hand;
+
     void Minimize_Click(object sender, RoutedEventArgs e)
     {
+        //UpdateText(spinner, "...", Random.Shared.Next(0,5));
         if (this.WindowState == WindowState.Normal)
         {
             this.WindowState = WindowState.Minimized;
@@ -337,8 +354,7 @@ public partial class MainWindow : Window
 
     void LoadBackup_Click(object sender, RoutedEventArgs e)
     {
-        bool answer = App.ShowMessage($"Are you sure?", "Load Backup", owner: this);
-        if (answer)
+        if (App.ShowMessage($"Are you sure?", "Load Backup", owner: this))
         {
             int count = 0;
             var prevFile = $"{_vm?.saveFileName}.{DateTime.Now.AddDays(-1):yyyyMMdd}.bak";
@@ -398,10 +414,31 @@ public partial class MainWindow : Window
     /// <summary>
     /// Reserved for debugging
     /// </summary>
-    void Spinner_Click(object sender, RoutedEventArgs e)
+    void Spinner_Click(object sender, RoutedEventArgs e) => UpdateText(tbStatus, $"{App.RuntimeInfo}", 1);
+    void Spinner_MouseDown(object sender, MouseButtonEventArgs e) => UpdateText(tbStatus, $"{App.RuntimeInfo}", 1);
+
+    /// <summary>
+    /// For <see cref="EventBus"/> demonstration. 
+    /// Currently this is not used for any real functionality.
+    /// </summary>
+    void EventBusMessageHandler(object? sender, ObjectEventBusArgs e)
     {
-        UpdateText(tbStatus, $"{App.RuntimeInfo}", 1);
+        if (e.Payload == null)
+            return;
+
+        if (e.Payload.GetType() == typeof(string))
+        {
+            if (string.IsNullOrEmpty($"{e.Payload}"))
+                return;
+            if ($"{e.Payload}".Contains("Stopping service"))
+                AnnounceMessage($"{e.Payload}");
+            else
+                UpdateText(tbStatus, $"{e.Payload}", Random.Shared.Next(0, 5));
+        }
+        else
+            Debug.WriteLine($"[EVENTBUS] Received event bus message of type '{e.Payload.GetType()}'");
     }
+
     #endregion
 
     #region [Helpers]
@@ -457,6 +494,31 @@ public partial class MainWindow : Window
                 }
                 cbx.Content = $"{text}";
             }
+            else if (fe is Button btn)
+            {
+                switch (level)
+                {
+                    case 0: btn.Foreground = _lvl0; break;
+                    case 1: btn.Foreground = _lvl1; break;
+                    case 2: btn.Foreground = _lvl2; break;
+                    case 3: btn.Foreground = _lvl3; break;
+                    case 4: btn.Foreground = _lvl4; break;
+                    default: btn.Foreground = _lvl0; break;
+                }
+                btn.Content = $"{text}";
+            }
+            else if (fe is DotAnimation da)
+            {
+                switch (level)
+                {
+                    case 0: da.FillColor = _lvl0; break;
+                    case 1: da.FillColor = _lvl1; break;
+                    case 2: da.FillColor = _lvl2; break;
+                    case 3: da.FillColor = _lvl3; break;
+                    case 4: da.FillColor = _lvl4; break;
+                    default: da.FillColor = _lvl0; break;
+                }
+            }
         });
     }
 
@@ -504,6 +566,9 @@ public partial class MainWindow : Window
         return result;
     }
 
+    /// <summary>
+    /// Finds a <see cref="CheckBox"/> inside each <see cref="ListBoxItem"/> and returns the count.
+    /// </summary>
     int GetEnabledAppCount()
     {
         int total = 0;
@@ -531,6 +596,9 @@ public partial class MainWindow : Window
         return total;
     }
 
+    /// <summary>
+    /// Determines if an application is already running by checking the process list.
+    /// </summary>
     bool IsAppRunning(string exePath)
     {
         try

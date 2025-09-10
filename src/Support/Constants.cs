@@ -12,5 +12,6 @@ public class Constants
     public static Uri FavDisabled = new Uri(@"Assets\FavoriteIcon10.png", UriKind.Relative);
     
     // EventBus
-    public static string EB_Notice = "Notice_Event";
+    public static string EB_ToModel = "Model_Message";
+    public static string EB_ToWindow = "Window_Message";
 }

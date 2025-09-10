@@ -1,0 +1,228 @@
+﻿<UserControl
+    x:Class="AppRestorer.Controls.RingSpinner"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AppRestorer.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Name="RS"
+    d:DesignHeight="50"
+    d:DesignWidth="50"
+    mc:Ignorable="d">
+
+    <FrameworkElement.Resources>
+
+        <SineEase x:Key="SineEase" EasingMode="EaseInOut" />
+        <CubicEase x:Key="CubicEase" EasingMode="EaseInOut" />
+        <PowerEase x:Key="PowerEase" EasingMode="EaseInOut" />
+        <QuadraticEase x:Key="QuadraticEase" EasingMode="EaseInOut" />
+
+        <!--#region [Storyboards]-->
+        <Storyboard x:Key="StoryboardAngleWithEasing1" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.0"
+                EasingFunction="{StaticResource CubicEase}"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle1"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.5" />
+        </Storyboard>
+        <Storyboard x:Key="StoryboardAngleWithEasing2" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.15"
+                EasingFunction="{StaticResource CubicEase}"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle2"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.5" />
+        </Storyboard>
+        <Storyboard x:Key="StoryboardAngleWithEasing3" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.3"
+                EasingFunction="{StaticResource CubicEase}"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle3"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.5" />
+        </Storyboard>
+        <Storyboard x:Key="StoryboardAngleWithEasing4" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.45"
+                EasingFunction="{StaticResource CubicEase}"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle4"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.5" />
+        </Storyboard>
+
+        <Storyboard x:Key="StoryboardAngleWithoutEasing1" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.0"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle1"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.5" />
+        </Storyboard>
+        <Storyboard x:Key="StoryboardAngleWithoutEasing2" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.15"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle2"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.25" />
+        </Storyboard>
+        <Storyboard x:Key="StoryboardAngleWithoutEasing3" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.3"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle3"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.0" />
+        </Storyboard>
+        <Storyboard x:Key="StoryboardAngleWithoutEasing4" RepeatBehavior="Forever">
+            <DoubleAnimation
+                BeginTime="0:0:0.45"
+                RepeatBehavior="Forever"
+                Storyboard.TargetName="Circle4"
+                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                To="360"
+                Duration="0:0:2.0" />
+        </Storyboard>
+        <!--#endregion-->
+
+    </FrameworkElement.Resources>
+
+    <FrameworkElement.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+            <BeginStoryboard Name="Storyboard1" Storyboard="{StaticResource StoryboardAngleWithEasing1}" />
+            <BeginStoryboard Name="Storyboard2" Storyboard="{StaticResource StoryboardAngleWithEasing2}" />
+            <BeginStoryboard Name="Storyboard3" Storyboard="{StaticResource StoryboardAngleWithEasing3}" />
+            <BeginStoryboard Name="Storyboard4" Storyboard="{StaticResource StoryboardAngleWithEasing4}" />
+        </EventTrigger>
+        <EventTrigger RoutedEvent="FrameworkElement.Unloaded">
+            <StopStoryboard BeginStoryboardName="Storyboard1" />
+            <StopStoryboard BeginStoryboardName="Storyboard2" />
+            <StopStoryboard BeginStoryboardName="Storyboard3" />
+            <StopStoryboard BeginStoryboardName="Storyboard4" />
+        </EventTrigger>
+    </FrameworkElement.Triggers>
+
+    <Grid>
+
+        <Grid
+            x:Name="Ring1"
+            Width="{Binding ElementName=RS, Path=Width, FallbackValue=50}"
+            Height="{Binding ElementName=RS, Path=Height, FallbackValue=50}"
+            Opacity="0.68">
+            <Grid x:Name="Circle1" RenderTransformOrigin="0.5,0.5">
+                <Grid.CacheMode>
+                    <BitmapCache />
+                </Grid.CacheMode>
+                <Grid.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform />
+                        <SkewTransform />
+                        <RotateTransform />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Grid.RenderTransform>
+                <Rectangle
+                    x:Name="Rect1"
+                    RadiusX="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    RadiusY="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}"
+                    StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />
+                <!--<Ellipse Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}" StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />-->
+            </Grid>
+        </Grid>
+
+        <Grid
+            x:Name="Ring2"
+            Width="{Binding ElementName=RS, Path=Width, FallbackValue=50}"
+            Height="{Binding ElementName=RS, Path=Height, FallbackValue=50}"
+            Opacity="0.68">
+            <Grid x:Name="Circle2" RenderTransformOrigin="0.5,0.5">
+                <Grid.CacheMode>
+                    <BitmapCache />
+                </Grid.CacheMode>
+                <Grid.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform />
+                        <SkewTransform />
+                        <RotateTransform />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Grid.RenderTransform>
+                <Rectangle
+                    x:Name="Rect2"
+                    RadiusX="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    RadiusY="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}"
+                    StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />
+                <!--<Ellipse Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}" StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />-->
+            </Grid>
+        </Grid>
+
+        <Grid
+            x:Name="Ring3"
+            Width="{Binding ElementName=RS, Path=Width, FallbackValue=50}"
+            Height="{Binding ElementName=RS, Path=Height, FallbackValue=50}"
+            Opacity="0.68">
+            <Grid x:Name="Circle3" RenderTransformOrigin="0.5,0.5">
+                <Grid.CacheMode>
+                    <BitmapCache />
+                </Grid.CacheMode>
+                <Grid.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform />
+                        <SkewTransform />
+                        <RotateTransform />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Grid.RenderTransform>
+                <Rectangle
+                    x:Name="Rect3"
+                    RadiusX="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    RadiusY="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}"
+                    StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />
+                <!--<Ellipse Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}" StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />-->
+            </Grid>
+        </Grid>
+
+        <Grid
+            x:Name="Ring4"
+            Width="{Binding ElementName=RS, Path=Width, FallbackValue=50}"
+            Height="{Binding ElementName=RS, Path=Height, FallbackValue=50}"
+            Opacity="0.68">
+            <Grid x:Name="Circle4" RenderTransformOrigin="0.5,0.5">
+                <Grid.CacheMode>
+                    <BitmapCache />
+                </Grid.CacheMode>
+                <Grid.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform />
+                        <SkewTransform />
+                        <RotateTransform />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Grid.RenderTransform>
+                <Rectangle
+                    x:Name="Rect4"
+                    RadiusX="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    RadiusY="{Binding ElementName=RS, Path=RingRadius, FallbackValue=10}"
+                    Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}"
+                    StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />
+                <!--<Ellipse Stroke="{Binding ElementName=RS, Path=RingBrush, FallbackValue=DodgerBlue}" StrokeThickness="{Binding ElementName=RS, Path=RingThickness, FallbackValue=5}" />-->
+            </Grid>
+        </Grid>
+
+    </Grid>
+</UserControl>

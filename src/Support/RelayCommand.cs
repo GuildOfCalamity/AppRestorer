@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
+using System.CodeDom.Compiler;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Input;
 
 namespace AppRestorer;
@@ -69,6 +70,8 @@ public class RelayCommand : ICommand
     }
 
     #endregion
+
+    public override string ToString() => $"RelayCommand<{mAction?.Target}> bound to event {mAction?.Method?.Name}";
 }
 
 #region [Generic RelayCommand]
@@ -77,8 +80,8 @@ public class RelayCommand : ICommand
 /// </summary>
 public class RelayCommand<T> : ICommand
 {
-    private Action<T> execute;
-    private Func<T, bool> canExecute;
+    Action<T> execute;
+    Func<T, bool> canExecute;
 
     public event EventHandler? CanExecuteChanged
     {
@@ -95,12 +98,16 @@ public class RelayCommand<T> : ICommand
     #region [Command Methods]
     public bool CanExecute(object? parameter)
     {
+        if (parameter == null)
+            Debug.WriteLine($"[WARNING] RelayCommand.CanExecute: {nameof(parameter)} is null!");
         return this.canExecute == null || this.canExecute((T)parameter);
     }
 
     public void Execute(object? parameter)
     {
-        //if (parameter is System.Windows.Controls.TextBox obj1)
+        //if (parameter == null)
+        //    Debug.WriteLine($"[WARNING] RelayCommand.Execute: {nameof(parameter)} is null!");
+        //else if (parameter is System.Windows.Controls.TextBox obj1)
         //    System.Diagnostics.Debug.WriteLine($">> Object {obj1?.Name} is a TextBox");
         //else if (parameter is System.Windows.Controls.Button obj2)
         //    System.Diagnostics.Debug.WriteLine($">> Object {obj2?.Name} is a Button");
@@ -114,8 +121,9 @@ public class RelayCommand<T> : ICommand
         }
     }
 
-    public override string ToString() => $"RelayCommand<{execute?.Target}> bound to event {execute?.Method?.Name}";
     #endregion
+
+    public override string ToString() => $"RelayCommand<{execute?.Target}> bound to event {execute?.Method?.Name}";
 }
 #endregion
 
@@ -129,7 +137,7 @@ public class AsyncRelayCommand : AsyncCommandBase
         _callback = callback;
     }
 
-    protected override async Task ExecuteAsync(object parameter)
+    protected override async Task ExecuteAsync(object? parameter)
     {
         await _callback();
     }
@@ -137,7 +145,7 @@ public class AsyncRelayCommand : AsyncCommandBase
 
 public abstract class AsyncCommandBase : ICommand
 {
-    readonly Action<Exception> _onException;
+    readonly Action<Exception>? _onException;
 
     bool _isExecuting;
     public bool IsExecuting
@@ -150,19 +158,19 @@ public abstract class AsyncCommandBase : ICommand
         }
     }
 
-    public event EventHandler CanExecuteChanged;
+    public event EventHandler? CanExecuteChanged;
 
     public AsyncCommandBase(Action<Exception> onException)
     {
         _onException = onException;
     }
 
-    public bool CanExecute(object parameter)
+    public bool CanExecute(object? parameter)
     {
         return !IsExecuting;
     }
 
-    public async void Execute(object parameter)
+    public async void Execute(object? parameter)
     {
         IsExecuting = true;
 
@@ -178,7 +186,7 @@ public abstract class AsyncCommandBase : ICommand
         IsExecuting = false;
     }
 
-    protected abstract Task ExecuteAsync(object parameter);
+    protected abstract Task ExecuteAsync(object? parameter);
 }
 #endregion
 
@@ -187,12 +195,12 @@ public abstract class AsyncCommandBase : ICommand
 /// </summary>
 public class RelayCommandResult : ICommand
 {
-    private readonly Action _execute;                // Standard Action with no return
-    private readonly Func<bool> _executeWithResult;  // New Func<bool> to return a result
-    private readonly Func<bool> _canExecute;
-    public event EventHandler CanExecuteChanged;
+    private readonly Action? _execute;                // Standard Action with no return
+    private readonly Func<bool>? _executeWithResult;  // New Func<bool> to return a result
+    private readonly Func<bool>? _canExecute;
+    public event EventHandler? CanExecuteChanged;
 
-    public RelayCommandResult(Action execute, Func<bool> canExecute = null)
+    public RelayCommandResult(Action execute, Func<bool>? canExecute = null)
     {
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
         _canExecute = canExecute;
@@ -205,12 +213,12 @@ public class RelayCommandResult : ICommand
     }
 
     #region [Command Methods]
-    public bool CanExecute(object parameter)
+    public bool CanExecute(object? parameter)
     {
         return _canExecute == null || _canExecute();
     }
 
-    public void Execute(object parameter)
+    public void Execute(object? parameter)
     {
         if (_execute != null)
         {
