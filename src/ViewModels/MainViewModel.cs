@@ -67,6 +67,20 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    string _titleText = App.AssemblyInfo;
+    public string TitleText
+    {
+        get => _titleText;
+        set
+        {
+            if (_titleText != value)
+            {
+                _titleText = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     bool _isBusy = false;
     public bool IsBusy
     {
@@ -101,6 +115,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand MaximizeCommand { get; set; }
     public ICommand CloseCommand { get; set; }
     public ICommand DebugCommand { get; set; }
+    public ICommand MenuCommand { get; set; }
     #endregion
 
     public MainViewModel(Window window)
@@ -115,6 +130,7 @@ public class MainViewModel : INotifyPropertyChanged
         MinimizeCommand = new RelayCommand(() => _window.WindowState = WindowState.Minimized);
         MaximizeCommand = new RelayCommand(() => _window.WindowState ^= WindowState.Maximized);
         DebugCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"{App.RuntimeInfo}"); });
+        MenuCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"{App.AppDataDirectory}"); });
 
         #region [Control Events]
         EventManager.RegisterClassHandler(typeof(TextBox), TextBox.GotFocusEvent, new RoutedEventHandler(TextBox_GotFocus));

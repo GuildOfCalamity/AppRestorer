@@ -1434,7 +1434,7 @@ public static class Extensions
     /// <summary>
     /// Reflects the AssemblyInfo attributes
     /// </summary>
-    public static string ReflectAssemblyFramework(this Type type)
+    public static string ReflectAssemblyFramework(this Type type, bool extraDetails = false)
     {
         try
         {
@@ -1452,13 +1452,20 @@ public static class Extensions
                 var infoAttr = (AssemblyInformationalVersionAttribute)assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)[0];
                 var nameAttr = (AssemblyProductAttribute)assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0];
                 var titleAttr = (AssemblyTitleAttribute)assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute), false)[0];
-                return string.Format("{0}  [{2}]  v{1}  {4}  –  {3}  ({5})", 
-                    nameAttr.Product, 
-                    fileVerAttr.Version, 
-                    string.IsNullOrEmpty(confAttr.Configuration) ? "N/A" : confAttr.Configuration, 
-                    string.IsNullOrEmpty(frameAttr.FrameworkDisplayName) ? frameAttr.FrameworkName : frameAttr.FrameworkDisplayName, 
-                    !string.IsNullOrEmpty(compAttr.Company) ? compAttr.Company : Environment.UserName, 
-                    System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                if (extraDetails)
+                {
+                    return string.Format("{0}  v{1}  ©  {4}  –  {3}  [{2}]  ({5})",
+                        nameAttr.Product,
+                        fileVerAttr.Version,
+                        string.IsNullOrEmpty(confAttr.Configuration) ? "N/A" : confAttr.Configuration,
+                        string.IsNullOrEmpty(frameAttr.FrameworkDisplayName) ? frameAttr.FrameworkName : frameAttr.FrameworkDisplayName,
+                        !string.IsNullOrEmpty(compAttr.Company) ? compAttr.Company : Environment.UserName,
+                        System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                }
+                else
+                {
+                    return string.Format("{0}  –  v{1}", nameAttr.Product, fileVerAttr.Version);
+                }
             }
         }
         catch (Exception) { }

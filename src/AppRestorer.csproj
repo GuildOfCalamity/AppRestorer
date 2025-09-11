@@ -36,6 +36,9 @@
     <None Remove="Assets\FavoriteIcon7.png" />
     <None Remove="Assets\FavoriteIcon8.png" />
     <None Remove="Assets\FavoriteIcon9.png" />
+    <None Remove="Assets\MenuArrowRight.png" />
+    <None Remove="Assets\MenuDotOff.png" />
+    <None Remove="Assets\MenuDotOn.png" />
     <None Remove="Assets\Spinner2.png" />
     <None Remove="Assets\Spinner3.png" />
     <None Remove="Assets\Spinner4.png" />
@@ -98,6 +101,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\FavoriteIcon9.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\MenuArrowRight.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\MenuDotOff.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\MenuDotOn.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Spinner1.png">

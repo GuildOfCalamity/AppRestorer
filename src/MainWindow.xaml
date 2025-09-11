@@ -62,7 +62,71 @@
                 Margin="-20,0,-20,0"
                 BorderBrush="{StaticResource TitleBrushBar}"
                 BorderThickness="0,0,0,2"
-                CornerRadius="5">
+                CornerRadius="5"
+                MouseRightButtonDown="TitleBar_MouseRightButtonDown">
+                <!--  Context menu for right-click  -->
+                <Border.ContextMenu>
+                    <ContextMenu
+                        Margin="10"
+                        HasDropShadow="False"
+                        Opened="TitleBarMenu_Opened">
+                        <ContextMenu.Template>
+                            <!--
+                                You can remove this local control template and just use
+                                the style from the App.xaml if you like that one better.
+                                If you do, remove the TitleBarMenu_Opened event in the
+                                code-behind since the MenuRoot and MenuScale won't exist.
+                            -->
+                            <ControlTemplate TargetType="ContextMenu">
+                                <Border
+                                    x:Name="MenuRoot"
+                                    Padding="4"
+                                    Background="#FF2D2D2D"
+                                    CornerRadius="4"
+                                    RenderTransformOrigin="0.5,0">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform x:Name="MenuScale" ScaleX="0.95" ScaleY="0.95" />
+                                    </Border.RenderTransform>
+                                    <Border.Effect>
+                                        <DropShadowEffect
+                                            BlurRadius="8"
+                                            Opacity="0.7"
+                                            ShadowDepth="6"
+                                            Color="Black" />
+                                    </Border.Effect>
+                                    <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                </Border>
+                            </ControlTemplate>
+                        </ContextMenu.Template>
+                        <MenuItem Command="{Binding DebugCommand, Mode=OneWay}" Header="Debug Test">
+                            <MenuItem.Icon>
+                                <Image
+                                    Width="20"
+                                    Height="20"
+                                    RenderOptions.BitmapScalingMode="Fant"
+                                    Source="/Assets/MenuArrowRight.png" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Command="{Binding MinimizeCommand, Mode=OneWay}" Header="Minimize">
+                            <MenuItem.Icon>
+                                <Image
+                                    Width="20"
+                                    Height="20"
+                                    RenderOptions.BitmapScalingMode="Fant"
+                                    Source="/Assets/MenuArrowRight.png" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Command="{Binding CloseCommand, Mode=OneWay}" Header="Close">
+                            <MenuItem.Icon>
+                                <Image
+                                    Width="20"
+                                    Height="20"
+                                    RenderOptions.BitmapScalingMode="Fant"
+                                    Source="/Assets/MenuArrowRight.png" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </Border.ContextMenu>
                 <StackPanel
                     VerticalAlignment="Stretch"
                     Orientation="Horizontal"
@@ -71,10 +135,10 @@
                         MinWidth="840"
                         MinHeight="30"
                         Margin="12,-12,0,0"
-                        FontSize="20"
+                        FontSize="18"
                         FontWeight="Bold"
                         Foreground="{StaticResource TitleBrush}"
-                        Text="App Restorer">
+                        Text="{Binding TitleText, Mode=OneWay}">
                         <TextBlock.Effect>
                             <DropShadowEffect
                                 BlurRadius="3"
@@ -259,6 +323,7 @@
 
                 <!--#region [Controls]-->
                 <StackPanel
+                    MinWidth="850"
                     Margin="10,10,10,-12"
                     HorizontalAlignment="Stretch"
                     DockPanel.Dock="Bottom"
@@ -288,6 +353,13 @@
                         Content="Load Backup"
                         FontSize="15"
                         Template="{StaticResource ReformedButton}" />
+                    <ctrl:TestControl
+                        Width="38"
+                        Height="38"
+                        Margin="80,0"
+                        HorizontalAlignment="Right"
+                        MouseUp="CustomMenu_Click" />
+
                 </StackPanel>
                 <!--#endregion-->
             </DockPanel>

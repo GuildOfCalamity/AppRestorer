@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Security.AccessControl;
 using System.Security.Principal;
-
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using AppRestorer.Controls;
@@ -39,6 +39,8 @@ public partial class MainWindow : Window
     DispatcherTimer? _timer;
     MainViewModel? _vm;
     ExplorerDialogCloser? _closer;
+    AnimatedContextMenu? _menu;
+    CancellationTokenSource _cts = new CancellationTokenSource();
     LinearGradientBrush _lvl0 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(120, 120, 120));
     LinearGradientBrush _lvl1 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(0, 181, 255));
     LinearGradientBrush _lvl2 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(255, 216, 0));
@@ -100,7 +102,24 @@ public partial class MainWindow : Window
         _timer.Tick += (s, ev) =>
         {
             if (!string.IsNullOrEmpty(_stopService))
-                Task.Run(() => ServiceInterop.CheckService(_stopService, stopIfRunning: true));
+            {
+                if (_stopService.Contains(","))
+                {
+                    //_stopService.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList()
+                    //    .ForEach(svc => Task.Run(() => ServiceInterop.CheckService(svc.Trim(), stopIfRunning: true), _cts.Token));
+                    Task.Run(() =>
+                    {
+                        foreach (var service in _stopService.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList())
+                        {
+                            ServiceInterop.CheckService(service, stopIfRunning: true);
+                        }
+                    }, _cts.Token);
+                }
+                else
+                {
+                    Task.Run(() => ServiceInterop.CheckService(_stopService, stopIfRunning: true), _cts.Token);
+                }
+            }
 
             UpdateText(tbStatus, $"Scanning…");
             _vm?.BackupAppFile(false);
@@ -124,7 +143,43 @@ public partial class MainWindow : Window
         _timer.Start();
         #endregion
 
-        // EventBus demonstration
+        #region [Custom control]
+        _menu = new AnimatedContextMenu();
+        _menu.Items.Add(new MenuItem { Header = "Test", Command = _vm!.MenuCommand, Icon = new Image
+        {
+            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
+            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
+            Stretch = Stretch.None,
+            Width = 20,
+            Height = 20,
+        }});
+        _menu.Items.Add(new MenuItem { Header = "Debug", Command = _vm!.DebugCommand, Icon = new Image
+        {
+            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
+            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
+            Stretch = Stretch.None,
+            Width = 20,
+            Height = 20
+        }});
+        _menu.Items.Add(new MenuItem { Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = new Image
+        {
+            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
+            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
+            Stretch = Stretch.None,
+            Width = 20,
+            Height = 20
+        }});
+        _menu.Items.Add(new MenuItem { Header = "Close", Command = _vm!.CloseCommand, Icon = new Image
+        {
+            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
+            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
+            Stretch = Stretch.None,
+            Width = 20,
+            Height = 20
+        }});
+        #endregion
+
+            // EventBus demonstration
         if (!App.RootEventBus.IsSubscribed(Constants.EB_ToWindow))
             App.RootEventBus.Subscribe(Constants.EB_ToWindow, EventBusMessageHandler);
     }
@@ -231,6 +286,10 @@ public partial class MainWindow : Window
     {
         _vm!.IsBusy = false;
 
+        // Cancel any pending tasks
+        if (!_cts.IsCancellationRequested)
+            _cts.Cancel();
+        
         if (_dialogWatcher)
             _closer?.Cancel();
         ConfigManager.Set("DialogWatcher", value: _dialogWatcher);
@@ -430,8 +489,8 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrEmpty($"{e.Payload}"))
                 return;
-            if ($"{e.Payload}".Contains("Stopping service"))
-                AnnounceMessage($"{e.Payload}");
+            if ($"{e.Payload}".StartsWith("stopping service", StringComparison.OrdinalIgnoreCase))
+                AnnounceMessage($"{e.Payload}", 50);
             else
                 UpdateText(tbStatus, $"{e.Payload}", Random.Shared.Next(0, 5));
         }
@@ -991,4 +1050,59 @@ public partial class MainWindow : Window
 
     }
     #endregion
+
+    void TitleBar_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {   // Optional: double-click to maximize/restore
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
+        else
+        {
+            //DragMove();
+        }
+
+    }
+
+    void TitleBarMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is ContextMenu menu &&
+                menu.Template.FindName("MenuRoot", menu) is Border root &&
+                menu.Template.FindName("MenuScale", menu) is ScaleTransform scale)
+        {
+            // Reset starting state
+            root.Opacity = 0; scale.ScaleX = 0.90; scale.ScaleY = 0.90;
+            // Fade in (opacity)
+            var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            // Scale up (X/Y from 90% to 100%)
+            var scaleX = new DoubleAnimation(0.90, 1, TimeSpan.FromMilliseconds(250))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            var scaleY = new DoubleAnimation(0.90, 1, TimeSpan.FromMilliseconds(250))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            // Start animations
+            root.BeginAnimation(UIElement.OpacityProperty, fade);
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleX);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleY);
+        }
+
+    }
+
+
+    /// <summary>
+    /// For <see cref="AnimatedContextMenu"/>
+    /// </summary>
+    void CustomMenu_Click(object sender, MouseButtonEventArgs e)
+    {
+        var ctrl = sender as UIElement;
+        if (ctrl == null) { return; }
+        _menu.PlacementTarget = ctrl;
+        _menu.IsOpen = true;
+    }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 
@@ -113,3 +114,34 @@ public class ImagePathConverter : IValueConverter
         return null;
     }
 }
+
+/// <summary>
+/// Converts a <see cref="MenuItemRole"/> to Visibility.
+/// Shows the element only if the role matches the parameter (e.g., "SubmenuHeader").
+/// </summary>
+/// <remarks>
+/// <see cref="MenuItemRole"/> is an internal enum WPF uses to distinguish between top‑level headers, submenu headers, and regular items.
+/// </remarks>
+public class MenuItemRoleToVisibilityConverter : IValueConverter
+{
+    // Singleton instance for easy XAML reference
+    public static readonly MenuItemRoleToVisibilityConverter Instance = new MenuItemRoleToVisibilityConverter();
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is MenuItemRole role && parameter is string param)
+        {
+            if (Enum.TryParse(param, out MenuItemRole targetRole))
+            {
+                return role == targetRole ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return null;
+    }
+}
+

@@ -9,8 +9,8 @@
     d:DesignWidth="50"
     mc:Ignorable="d">
     <Border
-        Width="20"
-        Height="20"
+        Width="24"
+        Height="24"
         Padding="1"
         local:PressBehavior.Enable="True"
         BorderBrush="#97A0A5"
@@ -45,7 +45,7 @@
                                 <Storyboard>
                                     <ColorAnimation
                                         Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                        To="SpringGreen"
+                                        To="Gold"
                                         Duration="0:0:0.1" />
                                 </Storyboard>
                             </BeginStoryboard>
@@ -70,7 +70,8 @@
                 x:Name="Glow"
                 Margin="1"
                 BlurRadius="12"
-                CornerRadius="1"
+                CornerRadius="0"
+                Opacity="0.25"
                 PenThickness="3"
                 Color="{StaticResource GlowLight}">
                 <local:GlowDecorator.Style>

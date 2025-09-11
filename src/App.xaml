@@ -30,6 +30,7 @@
             <local:BoolToReverseConverter x:Key="boolToReverse" />
             <local:BoolToImageConverter x:Key="boolToImage" />
             <local:PathToImageConverter x:Key="pathToImage" />
+            <local:MenuItemRoleToVisibilityConverter x:Key="MenuItemRoleToVisibilityConverter" />
             <!--#endregion-->
 
             <!--#region [Colors and Brushes]-->
@@ -115,6 +116,14 @@
                     <GradientStopCollection>
                         <GradientStop Offset="0.0" Color="#444" />
                         <GradientStop Offset="1.0" Color="#111" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="PopupMenuBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#00254B" />
+                        <GradientStop Offset="1.0" Color="#000311" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>
@@ -856,6 +865,207 @@
             </Style>
             <!--#endregion-->
 
+            <!--#region [Dark ContextMenu]-->
+            <Style TargetType="{x:Type ContextMenu}">
+                <Setter Property="MinWidth" Value="180" />
+                <Setter Property="MinHeight" Value="50" />
+                <Setter Property="Background" Value="{StaticResource ExtraDarkBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="HasDropShadow" Value="True" />
+                <Setter Property="Padding" Value="2" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ContextMenu">
+                            <Border
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style TargetType="{x:Type MenuItem}">
+                <Setter Property="MinWidth" Value="100" />
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <SolidColorBrush Color="Transparent" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Foreground">
+                    <Setter.Value>
+                        <SolidColorBrush Color="#D6D6D6" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Padding" Value="6,3" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type MenuItem}">
+                            <Border
+                                x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="3">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <!--  Icon  -->
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="MenuItemIconColumnGroup" />
+                                        <!--  Header  -->
+                                        <ColumnDefinition Width="*" />
+                                        <!--  Input gesture  -->
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="MenuItemIconColumnGroup" />
+                                        <!--  SubItem Arrow  -->
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <ctrl:GlowDecorator
+                                        x:Name="GlowHost"
+                                        Grid.ColumnSpan="3"
+                                        Margin="2"
+                                        BlurRadius="4"
+                                        CornerRadius="2"
+                                        Opacity="0.0"
+                                        PenThickness="2"
+                                        Color="{StaticResource GlowLight}" />
+                                    <!--<Path
+                                        x:Name="Arrow"
+                                        Grid.Column="3"
+                                        Margin="6,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Data="M 0 0 L 8 8 L 0 16 Z"
+                                        Fill="{TemplateBinding Foreground}"
+                                        Opacity="0.8"
+                                        Visibility="{TemplateBinding Role, Converter={x:Static MenuItemRoleToVisibilityConverter.Instance}, ConverterParameter=SubmenuHeader}" />-->
+                                    <ContentPresenter
+                                        x:Name="IconHost"
+                                        Grid.Column="0"
+                                        Margin="8,0,6,0"
+                                        VerticalAlignment="Center"
+                                        ContentSource="Icon"
+                                        Opacity="0.5"
+                                        RecognizesAccessKey="True" />
+                                    <ContentPresenter
+                                        x:Name="HeaderHost"
+                                        Grid.Column="1"
+                                        Margin="4,2"
+                                        VerticalAlignment="Center"
+                                        ContentSource="Header"
+                                        RecognizesAccessKey="True"
+                                        RenderTransformOrigin="0.75,0.5">
+                                        <ContentPresenter.RenderTransform>
+                                            <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1" />
+                                        </ContentPresenter.RenderTransform>
+                                    </ContentPresenter>
+                                    <!--  e.g. Ctrl+S  -->
+                                    <TextBlock
+                                        x:Name="GestureText"
+                                        Grid.Column="2"
+                                        Margin="8,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Opacity="0.75"
+                                        Text="{TemplateBinding InputGestureText}" />
+                                    <!--  If subitem detected, arrow will be shown  -->
+                                    <Path
+                                        x:Name="Arrow"
+                                        Grid.Column="3"
+                                        Margin="6,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Data="M 0 0 L 8 8 L 0 16 Z"
+                                        Fill="{TemplateBinding Foreground}"
+                                        Opacity="0.8"
+                                        Visibility="{Binding Role, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource MenuItemRoleToVisibilityConverter}, ConverterParameter=SubmenuHeader}" />
+
+                                </Grid>
+
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#4F4F4F" />
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="IconHost"
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="1"
+                                                    Duration="0:0:0.2" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="GlowHost"
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="1"
+                                                    Duration="0:0:0.2" />
+                                                <ColorAnimation
+                                                    Storyboard.TargetName="HeaderHost"
+                                                    Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)"
+                                                    To="#FFFFFF"
+                                                    Duration="0:0:0.2" />
+                                                <!--  Scale up  -->
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="HeaderHost"
+                                                    Storyboard.TargetProperty="(RenderTransform).(ScaleTransform.ScaleX)"
+                                                    To="1.03"
+                                                    Duration="0:0:0.15" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="HeaderHost"
+                                                    Storyboard.TargetProperty="(RenderTransform).(ScaleTransform.ScaleY)"
+                                                    To="1.03"
+                                                    Duration="0:0:0.15" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="IconHost"
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="0.5"
+                                                    Duration="0:0:0.2" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="GlowHost"
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="0"
+                                                    Duration="0:0:0.2" />
+                                                <ColorAnimation
+                                                    Storyboard.TargetName="HeaderHost"
+                                                    Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)"
+                                                    To="#D6D6D6"
+                                                    Duration="0:0:0.2" />
+                                                <!--  Scale back  -->
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="HeaderHost"
+                                                    Storyboard.TargetProperty="(RenderTransform).(ScaleTransform.ScaleX)"
+                                                    To="1"
+                                                    Duration="0:0:0.15" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="HeaderHost"
+                                                    Storyboard.TargetProperty="(RenderTransform).(ScaleTransform.ScaleY)"
+                                                    To="1"
+                                                    Duration="0:0:0.15" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="#FF6A6A6A" />
+                                    <Setter TargetName="IconHost" Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!--#endregion-->
 
         </ResourceDictionary>
     </Application.Resources>
