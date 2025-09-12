@@ -55,6 +55,8 @@
                 <RowDefinition Height="22" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
+
+            <!--#region [TitleBar]-->
             <Border
                 x:Name="titleBar"
                 Grid.Row="0"
@@ -125,6 +127,19 @@
                                     Source="/Assets/MenuArrowRight.png" />
                             </MenuItem.Icon>
                         </MenuItem>
+                        <!--
+                        <MenuItem Command="{Binding CloseCommand, Mode=OneWay}" Header="Test">
+                            <MenuItem.Icon>
+                                <Path
+                                    Width="20"
+                                    Height="20"
+                                    Data="M 0 0 L 12 8 L 0 16 Z"
+                                    Fill="White"
+                                    Stroke="#202020"
+                                    StrokeThickness="1" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        -->
                     </ContextMenu>
                 </Border.ContextMenu>
                 <StackPanel
@@ -176,6 +191,7 @@
                         ToolTipService.ToolTip="close" />
                 </StackPanel>
             </Border>
+            <!--#endregion-->
 
             <DockPanel Grid.Row="1">
                 <StackPanel
@@ -209,11 +225,6 @@
                         FontSize="18"
                         Foreground="{StaticResource TitleBrush}"
                         Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" />
-
-
-                    <!--
-                    <ctrl:TestControl />
-                    -->
 
                     <!--
                     <ctrl:TrackRing
@@ -262,6 +273,7 @@
                     </ctrl:DotAnimation>
                 </StackPanel>
 
+                <!--#region [App List]-->
                 <Border
                     x:Name="Border"
                     Margin="10,5,10,0"
@@ -320,6 +332,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </Border>
+                <!--#endregion-->
 
                 <!--#region [Controls]-->
                 <StackPanel
@@ -353,15 +366,16 @@
                         Content="Load Backup"
                         FontSize="15"
                         Template="{StaticResource ReformedButton}" />
-                    <ctrl:TestControl
+                    <ctrl:ActiveArrow
                         Width="38"
                         Height="38"
-                        Margin="80,0"
+                        Margin="40,0"
                         HorizontalAlignment="Right"
                         MouseUp="CustomMenu_Click" />
 
                 </StackPanel>
                 <!--#endregion-->
+
             </DockPanel>
         </Grid>
     </Border>

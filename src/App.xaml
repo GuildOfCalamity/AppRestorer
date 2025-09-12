@@ -866,10 +866,27 @@
             <!--#endregion-->
 
             <!--#region [Dark ContextMenu]-->
+            <Color x:Key="ControlInactive">#6A6A6A</Color>
+            <SolidColorBrush x:Key="ControlInactiveBrush" Color="{StaticResource ControlInactive}" />
+            <Color x:Key="ForegroundInactive">#D9D9D9</Color>
+            <SolidColorBrush x:Key="ForegroundInactiveBrush" Color="{StaticResource ForegroundInactive}" />
+            <Color x:Key="ForegroundActive">#FFFFFF</Color>
+            <SolidColorBrush x:Key="ForegroundActiveBrush" Color="{StaticResource ForegroundActive}" />
+            <Color x:Key="BackgroundActive">#4F4F4F</Color>
+            <SolidColorBrush x:Key="BackgroundActiveBrush" Color="{StaticResource BackgroundActive}" />
+            <LinearGradientBrush x:Key="BackgroundInactive" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#424242" />
+                        <GradientStop Offset="1.0" Color="#080808" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+
             <Style TargetType="{x:Type ContextMenu}">
                 <Setter Property="MinWidth" Value="180" />
                 <Setter Property="MinHeight" Value="50" />
-                <Setter Property="Background" Value="{StaticResource ExtraDarkBrush}" />
+                <Setter Property="Background" Value="{StaticResource BackgroundInactive}" />
                 <Setter Property="Foreground" Value="White" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="1" />
@@ -902,7 +919,7 @@
                 </Setter>
                 <Setter Property="Foreground">
                     <Setter.Value>
-                        <SolidColorBrush Color="#D6D6D6" />
+                        <SolidColorBrush Color="{StaticResource ForegroundInactive}" />
                     </Setter.Value>
                 </Setter>
                 <Setter Property="Padding" Value="6,3" />
@@ -926,15 +943,17 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
+                                    <!--  Outline/Glow  -->
                                     <ctrl:GlowDecorator
                                         x:Name="GlowHost"
-                                        Grid.ColumnSpan="3"
+                                        Grid.ColumnSpan="4"
                                         Margin="2"
                                         BlurRadius="4"
                                         CornerRadius="2"
                                         Opacity="0.0"
                                         PenThickness="2"
                                         Color="{StaticResource GlowLight}" />
+
                                     <!--<Path
                                         x:Name="Arrow"
                                         Grid.Column="3"
@@ -944,6 +963,8 @@
                                         Fill="{TemplateBinding Foreground}"
                                         Opacity="0.8"
                                         Visibility="{TemplateBinding Role, Converter={x:Static MenuItemRoleToVisibilityConverter.Instance}, ConverterParameter=SubmenuHeader}" />-->
+
+                                    <!--  Image/Icon  -->
                                     <ContentPresenter
                                         x:Name="IconHost"
                                         Grid.Column="0"
@@ -952,6 +973,8 @@
                                         ContentSource="Icon"
                                         Opacity="0.5"
                                         RecognizesAccessKey="True" />
+
+                                    <!--  Text/Header  -->
                                     <ContentPresenter
                                         x:Name="HeaderHost"
                                         Grid.Column="1"
@@ -964,7 +987,8 @@
                                             <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1" />
                                         </ContentPresenter.RenderTransform>
                                     </ContentPresenter>
-                                    <!--  e.g. Ctrl+S  -->
+
+                                    <!--  Input/Gesture e.g. Ctrl+S  -->
                                     <TextBlock
                                         x:Name="GestureText"
                                         Grid.Column="2"
@@ -973,6 +997,7 @@
                                         Foreground="{TemplateBinding Foreground}"
                                         Opacity="0.75"
                                         Text="{TemplateBinding InputGestureText}" />
+
                                     <!--  If subitem detected, arrow will be shown  -->
                                     <Path
                                         x:Name="Arrow"
@@ -989,7 +1014,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsHighlighted" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="#4F4F4F" />
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource BackgroundActiveBrush}" />
                                     <Trigger.EnterActions>
                                         <BeginStoryboard>
                                             <Storyboard>
@@ -1006,7 +1031,7 @@
                                                 <ColorAnimation
                                                     Storyboard.TargetName="HeaderHost"
                                                     Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)"
-                                                    To="#FFFFFF"
+                                                    To="{StaticResource ForegroundActive}"
                                                     Duration="0:0:0.2" />
                                                 <!--  Scale up  -->
                                                 <DoubleAnimation
@@ -1038,7 +1063,7 @@
                                                 <ColorAnimation
                                                     Storyboard.TargetName="HeaderHost"
                                                     Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)"
-                                                    To="#D6D6D6"
+                                                    To="{StaticResource ForegroundInactive}"
                                                     Duration="0:0:0.2" />
                                                 <!--  Scale back  -->
                                                 <DoubleAnimation
@@ -1057,7 +1082,7 @@
 
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="Foreground" Value="#FF6A6A6A" />
+                                    <Setter Property="Foreground" Value="{StaticResource ControlInactiveBrush}" />
                                     <Setter TargetName="IconHost" Property="Opacity" Value="0.4" />
                                 </Trigger>
                             </ControlTemplate.Triggers>

@@ -1,24 +1,31 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
-
 namespace AppRestorer.Controls;
 
 /// <summary>
-/// The purpose of this control is to provide a context menu with open AND close animations.
-/// The standard WPF <c>ContextMenu</c> does not support a close animation directly, 
-/// since it only exposes a <c>Closed</c> event, by then the visual tree is torn down 
-/// and animations wouldn't be relevant.
+///   The purpose of this control is to provide a context menu with open AND close animations.
+///   The standard WPF <c>ContextMenu</c> does not support a close animation directly, 
+///   since it only exposes a <c>Closed</c> event, by then the visual tree is torn down 
+///   and animations wouldn't be relevant.
 /// </summary>
+/// <remarks>
+///   In this demo the <see cref="AnimatedContextMenu"/> is used in tandem with the 
+///   <see cref="ActiveArrow"/> control, but it can be bound to any <see cref="UIElement"/>.
+/// </remarks>
 public class AnimatedContextMenu : Menu
 {
     #region [Properties]
     bool _isClosing;
     bool _closeAfterClick = true;
+    double _rootScale = 0.90;
+    double _inMS = 150;
+    double _outMS = 200;
     readonly Popup _popup;
     readonly Border _root;
     readonly ScaleTransform _scale;
@@ -71,16 +78,17 @@ public class AnimatedContextMenu : Menu
     }
     #endregion
 
-    public AnimatedContextMenu(bool closeAfterClick = true)
+    public AnimatedContextMenu(bool closeAfterClick = true, bool closeOnMouseLeave = true, double minWidth = 100)
     {
         _closeAfterClick = closeAfterClick;
 
         var brsh = (Brush)Application.Current.TryFindResource("PopupMenuBrush");
 
         // Root for animation
-        _scale = new ScaleTransform(0.95, 0.95);
+        _scale = new ScaleTransform(_rootScale, _rootScale);
         _root = new Border
         {
+            MinWidth = minWidth,
             //Background = (Brush)new BrushConverter().ConvertFrom("#FF2D2D30"),
             Background = brsh ?? Extensions.CreateGradientBrush(Color.FromRgb(50, 50, 50), Color.FromRgb(10, 10, 10)),
             CornerRadius = new CornerRadius(4),
@@ -94,7 +102,7 @@ public class AnimatedContextMenu : Menu
                 Color = Colors.Navy,
                 Direction = 310,
                 ShadowDepth = 6,
-                Opacity = 0.6,
+                Opacity = 0.5,
                 BlurRadius = 7
             }
         };
@@ -109,12 +117,13 @@ public class AnimatedContextMenu : Menu
         };
         _root.Child = itemsHost;
 
-        // Host in Popup
+        // Host in a popup control
         _popup = new Popup
         {
             AllowsTransparency = true,
             Placement = PlacementMode.MousePoint,
-            StaysOpen = false,
+            PopupAnimation = PopupAnimation.Fade,
+            StaysOpen = closeOnMouseLeave,
             Child = _root
         };
 
@@ -126,6 +135,24 @@ public class AnimatedContextMenu : Menu
                 RaiseEvent(new RoutedEventArgs(ClosedEvent));
             }
         };
+
+        // If Popup.StaysOpen=false, then this is not needed, but just in case.
+        _popup.LostMouseCapture += (_, __) =>
+        {
+            Debug.WriteLine("[INFO] Popup LostFocus");
+            if (!_isClosing)
+                CloseMenu();
+        };
+
+        if (closeOnMouseLeave)
+        {
+            _root.MouseLeave += (_, __) =>
+            {
+                Debug.WriteLine("[INFO] Border MouseLeave");
+                if (!_isClosing)
+                    CloseMenu();
+            };
+        }
     }
 
     void OpenMenu()
@@ -143,19 +170,19 @@ public class AnimatedContextMenu : Menu
         }
 
         _root.Opacity = 0;
-        _scale.ScaleX = 0.90;
-        _scale.ScaleY = 0.90;
+        _scale.ScaleX = _rootScale;
+        _scale.ScaleY = _rootScale;
 
         _popup.IsOpen = true;
 
         // Open animation
-        var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150))
+        var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(_inMS))
         {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            EasingFunction = new PowerEase { EasingMode = EasingMode.EaseOut }
         };
-        var scaleUp = new DoubleAnimation(0.80, 1, TimeSpan.FromMilliseconds(350))
+        var scaleUp = new DoubleAnimation(_rootScale, 1, TimeSpan.FromMilliseconds(_inMS*2d))
         {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            EasingFunction = new PowerEase { EasingMode = EasingMode.EaseOut }
         };
 
         _root.BeginAnimation(UIElement.OpacityProperty, fadeIn);
@@ -173,13 +200,13 @@ public class AnimatedContextMenu : Menu
 
         _isClosing = true;
 
-        var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(200))
+        var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(_outMS))
         {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            EasingFunction = new PowerEase { EasingMode = EasingMode.EaseIn }
         };
-        var scaleDown = new DoubleAnimation(1, 0.6, TimeSpan.FromMilliseconds(200))
+        var scaleDown = new DoubleAnimation(1, _rootScale / 1.5d, TimeSpan.FromMilliseconds(_outMS))
         {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            EasingFunction = new PowerEase { EasingMode = EasingMode.EaseIn }
         };
 
         fadeOut.Completed += (_, __) =>

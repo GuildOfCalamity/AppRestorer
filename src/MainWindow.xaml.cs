@@ -143,43 +143,24 @@ public partial class MainWindow : Window
         _timer.Start();
         #endregion
 
-        #region [Custom control]
-        _menu = new AnimatedContextMenu();
-        _menu.Items.Add(new MenuItem { Header = "Test", Command = _vm!.MenuCommand, Icon = new Image
-        {
-            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
-            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
-            Stretch = Stretch.None,
-            Width = 20,
-            Height = 20,
-        }});
-        _menu.Items.Add(new MenuItem { Header = "Debug", Command = _vm!.DebugCommand, Icon = new Image
+        #region [Custom menu control]
+        _menu = new AnimatedContextMenu(closeOnMouseLeave: false);
+        var img1 = new Image
         {
             //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
             Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
             Stretch = Stretch.None,
             Width = 20,
             Height = 20
-        }});
-        _menu.Items.Add(new MenuItem { Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = new Image
-        {
-            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
-            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
-            Stretch = Stretch.None,
-            Width = 20,
-            Height = 20
-        }});
-        _menu.Items.Add(new MenuItem { Header = "Close", Command = _vm!.CloseCommand, Icon = new Image
-        {
-            //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
-            Source = new BitmapImage(new Uri(@"/Assets/MenuArrowRight.png", UriKind.Relative)),
-            Stretch = Stretch.None,
-            Width = 20,
-            Height = 20
-        }});
+        };
+        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Test", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Item", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Debug", Command = _vm!.DebugCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Close", Command = _vm!.CloseCommand, Icon = MenuIconFactory.Create("Close", null, new SolidColorBrush(Color.FromRgb(250, 10, 30))) });
         #endregion
 
-            // EventBus demonstration
+        // EventBus demonstration
         if (!App.RootEventBus.IsSubscribed(Constants.EB_ToWindow))
             App.RootEventBus.Subscribe(Constants.EB_ToWindow, EventBusMessageHandler);
     }
@@ -235,7 +216,10 @@ public partial class MainWindow : Window
                 AnnounceMessage("I have created a desktop shortcut for you.");
         }
         else
-            AnnounceMessage("Loading App Restorer");
+        {
+            if (!Debugger.IsAttached)
+                AnnounceMessage("Loading App Restorer");
+        }
 
 
         if (_appList == null)
@@ -1101,7 +1085,7 @@ public partial class MainWindow : Window
     void CustomMenu_Click(object sender, MouseButtonEventArgs e)
     {
         var ctrl = sender as UIElement;
-        if (ctrl == null) { return; }
+        if (ctrl == null || _menu == null) { return; }
         _menu.PlacementTarget = ctrl;
         _menu.IsOpen = true;
     }

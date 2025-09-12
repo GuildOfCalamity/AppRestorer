@@ -266,6 +266,23 @@ public static class Extensions
     /// <returns>The corresponding DateTimeOffset</returns>
     public static DateTimeOffset ToOffset(this DateTime date, TimeSpan offset) => new DateTimeOffset(date).ToOffset(offset);
 
+    #region [Color Brush Methods]
+    /// <summary>
+    /// Generates a random <see cref="System.Windows.Media.Color"/>.
+    /// </summary>
+    /// <returns><see cref="System.Windows.Media.Color"/></returns>
+    public static System.Windows.Media.Color GenerateRandomColor()
+    {
+        byte r = (byte)Random.Shared.Next(0, 256);
+        byte g = (byte)Random.Shared.Next(0, 256);
+        byte b = (byte)Random.Shared.Next(0, 256);
+        return System.Windows.Media.Color.FromRgb(r, g, b);
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="LinearGradientBrush"/> using two <see cref="System.Windows.Media.Color"/>s.
+    /// </summary>
+    /// <returns><see cref="LinearGradientBrush"/></returns>
     public static LinearGradientBrush CreateGradientBrush(Color c1, Color c2)
     {
         var gs1 = new GradientStop(c1, 0);
@@ -281,6 +298,10 @@ public static class Extensions
         return lgb;
     }
 
+    /// <summary>
+    /// Generates a random <see cref="LinearGradientBrush"/> using three <see cref="System.Windows.Media.Color"/>s.
+    /// </summary>
+    /// <returns><see cref="LinearGradientBrush"/></returns>
     public static LinearGradientBrush CreateGradientBrush(Color c1, Color c2, Color c3)
     {
         var gs1 = new GradientStop(c1, 0);
@@ -298,10 +319,10 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Generate a random brush
+    /// Generates a random <see cref="SolidColorBrush"/>.
     /// </summary>
     /// <returns><see cref="SolidColorBrush"/></returns>
-    public static SolidColorBrush GenerateRandomBrush()
+    public static SolidColorBrush CreateRandomBrush()
     {
         byte r = (byte)Random.Shared.Next(0, 256);
         byte g = (byte)Random.Shared.Next(0, 256);
@@ -310,16 +331,306 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Generate a random color
+    /// Avoids near-white values by using high saturation ranges prevent desaturation.
     /// </summary>
-    /// <returns><see cref="System.Windows.Media.Color"/></returns>
-    public static System.Windows.Media.Color GenerateRandomColor()
-    {
-        byte r = (byte)Random.Shared.Next(0, 256);
-        byte g = (byte)Random.Shared.Next(0, 256);
-        byte b = (byte)Random.Shared.Next(0, 256);
-        return System.Windows.Media.Color.FromRgb(r, g, b);
+    public static SolidColorBrush CreateRandomLightBrush(byte alpha = 255)
+    { 
+        return CreateRandomHsvBrush(
+            hue: Random.Shared.NextDouble() * 360.0,
+            saturation: Lerp(0.65, 1.0, Random.Shared.NextDouble()), // high saturation to avoid gray
+            value: Lerp(0.85, 1.0, Random.Shared.NextDouble()),      // bright
+            alpha: alpha);
     }
+
+    /// <summary>
+    /// Avoids near-black values by using high saturation ranges prevent desaturation.
+    /// </summary>
+    public static SolidColorBrush CreateRandomDarkBrush(byte alpha = 255)
+    {
+        return CreateRandomHsvBrush(
+            hue: Random.Shared.NextDouble() * 360.0,
+            saturation: Lerp(0.65, 1.0, Random.Shared.NextDouble()), // high saturation to avoid gray
+            value: Lerp(0.2, 0.45, Random.Shared.NextDouble()),      // dark
+            alpha: alpha);
+    }
+
+    public static SolidColorBrush CreateRandomHsvBrush(double hue, double saturation, double value, byte alpha)
+    {
+        var (r, g, b) = HsvToRgb(hue, saturation, value);
+        var brush = new SolidColorBrush(Color.FromArgb(alpha, r, g, b));
+        if (brush.CanFreeze) 
+            brush.Freeze(); // freeze for performance (if animation is not needed)
+        return brush;
+    }
+
+    static (byte r, byte g, byte b) HsvToRgb(double h, double s, double v)
+    {
+        // h: [0,360), s,v: [0,1]
+        if (s <= 0.00001)
+        {
+            // If saturation is approx zero then return achromatic (grey)
+            byte grey = (byte)Math.Round(v * 255.0);
+            return (grey, grey, grey);
+        }
+
+        h = (h % 360 + 360) % 360; // normalize
+        double c = v * s;
+        double x = c * (1 - Math.Abs((h / 60.0) % 2 - 1));
+        double m = v - c;
+
+        //double (r1, g1, b1) = h switch
+        //{
+        //    < 60 => (c, x, 0),
+        //    < 120 => (x, c, 0),
+        //    < 180 => (0, c, x),
+        //    < 240 => (0, x, c),
+        //    < 300 => (x, 0, c),
+        //    _ => (c, 0, x)
+        //};
+        double r1, g1, b1;
+        if (h < 60)       { r1 = c; g1 = x; b1 = 0; }
+        else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+        else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+        else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+        else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+        else              { r1 = c; g1 = 0; b1 = x; }
+        byte r = (byte)Math.Round((r1 + m) * 255.0);
+        byte g = (byte)Math.Round((g1 + m) * 255.0);
+        byte b = (byte)Math.Round((b1 + m) * 255.0);
+        return (r, g, b);
+    }
+
+    static void RgbToHsv(byte r, byte g, byte b, out double h, out double s, out double v)
+    {
+        double rd = r / 255.0;
+        double gd = g / 255.0;
+        double bd = b / 255.0;
+
+        double max = Math.Max(rd, Math.Max(gd, bd));
+        double min = Math.Min(rd, Math.Min(gd, bd));
+        double delta = max - min;
+
+        // Hue
+        if (delta < 0.00001) { h = 0; }
+        else if (max == rd) { h = 60 * (((gd - bd) / delta) % 6); }
+        else if (max == gd) { h = 60 * (((bd - rd) / delta) + 2); }
+        else { h = 60 * (((rd - gd) / delta) + 4); }
+        if (h < 0) { h += 360; }
+
+        // Saturation
+        s = (max <= 0) ? 0 : delta / max;
+
+        // Value
+        v = max;
+    }
+    
+    static double Lerp(double a, double b, double t) => a + (b - a) * t;
+
+    public enum ColorTilt
+    {
+        Red,
+        Orange,
+        Yellow,
+        Green,
+        Blue,
+        Purple
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="SolidColorBrush"/> based on a given <see cref="ColorTilt"/>.
+    /// </summary>
+    public static SolidColorBrush CreateRandomLightBrush(ColorTilt tilt, double tiltStrength = 30, byte alpha = 255)
+    {
+        double hue = GetTiltedHue(tilt, tiltStrength);
+        double saturation = Lerp(0.65, 1.0, Random.Shared.NextDouble()); // high saturation to avoid gray
+        double value = Lerp(0.85, 1.0, Random.Shared.NextDouble());      // bright
+        return CreateBrushFromHsv(hue, saturation, value, alpha);
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="SolidColorBrush"/> based on a given <see cref="ColorTilt"/>.
+    /// </summary>
+    public static SolidColorBrush CreateRandomDarkBrush(ColorTilt tilt, double tiltStrength = 30, byte alpha = 255)
+    {
+        double hue = GetTiltedHue(tilt, tiltStrength);
+        double saturation = Lerp(0.65, 1.0, Random.Shared.NextDouble()); // high saturation to avoid gray
+        double value = Lerp(0.2, 0.45, Random.Shared.NextDouble());      // dark
+        return CreateBrushFromHsv(hue, saturation, value, alpha);
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="SolidColorBrush"/> based on a given dictionary of <see cref="ColorTilt"/>s.
+    /// </summary>
+    public static SolidColorBrush GetRandomLightBrush(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength = 30, byte alpha = 255)
+    {
+        double hue = GetBlendedTiltedHue(tiltWeights, tiltStrength);
+        double saturation = Lerp(0.65, 1.0, Random.Shared.NextDouble()); // high saturation to avoid gray
+        double value = Lerp(0.85, 1.0, Random.Shared.NextDouble());      // bright
+        return CreateBrushFromHsv(hue, saturation, value, alpha);
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="SolidColorBrush"/> based on a given dictionary of <see cref="ColorTilt"/>s.
+    /// </summary>
+    public static SolidColorBrush GetRandomDarkBrush(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength = 30, byte alpha = 255)
+    {
+        double hue = GetBlendedTiltedHue(tiltWeights, tiltStrength);
+        double saturation = Lerp(0.65, 1.0, Random.Shared.NextDouble()); // high saturation to avoid gray
+        double value = Lerp(0.2, 0.45, Random.Shared.NextDouble());      // dark
+        return CreateBrushFromHsv(hue, saturation, value, alpha);
+    }
+
+    static SolidColorBrush CreateBrushFromHsv(double hue, double saturation, double value, byte alpha)
+    {
+        var (r, g, b) = HsvToRgb(hue, saturation, value);
+        var brush = new SolidColorBrush(Color.FromArgb(alpha, r, g, b));
+        if (brush.CanFreeze) { brush.Freeze(); }
+        return brush;
+    }
+
+    static double GetTiltedHue(ColorTilt tilt, double variance = 30)
+    {
+        // Hue centers in degrees for basic colors
+        double centerHue;
+        switch (tilt)
+        {
+            case ColorTilt.Red: centerHue = 0.0;      // also wraps near 360
+                break;
+            case ColorTilt.Orange: centerHue = 30.0;
+                break;
+            case ColorTilt.Yellow: centerHue = 60.0;
+                break;
+            case ColorTilt.Green: centerHue = 120.0;
+                break;
+            case ColorTilt.Blue: centerHue = 240.0;
+                break;
+            case ColorTilt.Purple: centerHue = 280.0; // between magenta (300) and blue
+                break;
+            default: centerHue = 0.0;
+                break;
+        }
+
+        // Clamp variance to [0,180]
+        variance = Math.Max(0, Math.Min(variance, 180));
+
+        // Allow ±30° variation for variety
+        double minHue = centerHue - variance;
+        double maxHue = centerHue + variance;
+
+        double hue = minHue + Random.Shared.NextDouble() * (maxHue - minHue);
+        // Wrap around 0–360
+        if (hue < 0) { hue += 360; }
+        if (hue >= 360) {hue -= 360; }
+
+        return hue;
+    }
+
+    static double GetBlendedTiltedHue(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength)
+    {
+        if (tiltWeights == null || tiltWeights.Count == 0)
+            return Random.Shared.NextDouble() * 360.0;
+
+        // Normalize weights
+        double total = tiltWeights.Values.Sum();
+        if (total <= 0) return Random.Shared.NextDouble() * 360.0;
+
+        // Pick a tilt based on weighted random
+        double roll = Random.Shared.NextDouble() * total;
+        double cumulative = 0;
+        ColorTilt chosenTilt = tiltWeights.First().Key;
+
+        foreach (var kvp in tiltWeights)
+        {
+            cumulative += kvp.Value;
+            if (roll <= cumulative)
+            {
+                chosenTilt = kvp.Key;
+                break;
+            }
+        }
+
+        // Get center hue for chosen tilt
+        double centerHue = GetCenterHue(chosenTilt);
+
+        // Clamp tiltStrength
+        tiltStrength = Math.Max(0, Math.Min(tiltStrength, 180));
+
+        // ± tiltStrength variation
+        double minHue = centerHue - tiltStrength;
+        double maxHue = centerHue + tiltStrength;
+
+        double hue = minHue + Random.Shared.NextDouble() * (maxHue - minHue);
+        if (hue < 0) hue += 360;
+        if (hue >= 360) hue -= 360;
+
+        return hue;
+    }
+
+    static double GetCenterHue(ColorTilt tilt)
+    {
+        switch (tilt)
+        {
+            case ColorTilt.Red:    return 0.0;
+            case ColorTilt.Orange: return 30.0;
+            case ColorTilt.Yellow: return 60.0;
+            case ColorTilt.Green:  return 120.0;
+            case ColorTilt.Blue:   return 240.0;
+            case ColorTilt.Purple: return 280.0;
+            default:               return 0.0;
+        }
+    }
+
+    public static SolidColorBrush BrightenBrush(SolidColorBrush brush, double amount)
+    {
+        if (brush == null)
+            throw new ArgumentNullException(nameof(brush));
+
+        // Clamp amount to [0, 1]
+        amount = Math.Max(0, Math.Min(amount, 1));
+
+        Color color = brush.Color;
+
+        // Convert to HSV
+        double h, s, v;
+        RgbToHsv(color.R, color.G, color.B, out h, out s, out v);
+
+        // Increase brightness
+        v = Math.Min(1.0, v + amount);
+
+        // Convert back to RGB
+        var (r, g, b) = HsvToRgb(h, s, v);
+
+        var newBrush = new SolidColorBrush(Color.FromArgb(color.A, r, g, b));
+        if (newBrush.CanFreeze) { newBrush.Freeze(); }
+        return newBrush;
+    }
+
+    public static SolidColorBrush DarkenBrush(SolidColorBrush brush, double amount)
+    {
+        if (brush == null)
+            throw new ArgumentNullException(nameof(brush));
+
+        // Clamp amount to [0, 1]
+        amount = Math.Max(0, Math.Min(amount, 1));
+
+        Color color = brush.Color;
+
+        // Convert to HSV
+        double h, s, v;
+        RgbToHsv(color.R, color.G, color.B, out h, out s, out v);
+
+        // Decrease brightness
+        v = Math.Max(0.0, v - amount);
+
+        // Convert back to RGB
+        var (r, g, b) = HsvToRgb(h, s, v);
+
+        var newBrush = new SolidColorBrush(Color.FromArgb(color.A, r, g, b));
+        if (newBrush.CanFreeze) newBrush.Freeze();
+        return newBrush;
+    }
+
+    #endregion
 
     /// <summary>
     /// Fetch all <see cref="System.Windows.Media.Brushes"/>.
