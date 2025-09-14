@@ -70,7 +70,6 @@ public class AnimatedContextMenu : Menu
             typeof(RoutedEventHandler),
             typeof(AnimatedContextMenu));
 
-
     public event RoutedEventHandler Closed
     {
         add => AddHandler(ClosedEvent, value);
@@ -78,10 +77,23 @@ public class AnimatedContextMenu : Menu
     }
     #endregion
 
-    public AnimatedContextMenu(bool closeAfterClick = true, bool closeOnMouseLeave = true, double minWidth = 100)
+    /// <summary>
+    /// An <see cref="ItemsControl"/> wrapped inside a <see cref="Popup"/> with open and close animations.
+    /// </summary>
+    /// <param name="closeAfterClick">
+    /// When an item is selected, if it is not bound to an <see cref="System.Windows.Input.ICommand"/>, 
+    /// then the menu can remain open. Set this to <c>false</c> to always clock after and item is clicked.
+    /// </param>
+    /// <param name="closeOnMouseLeave">
+    /// Set this to <c>true</c> to auto-close the <see cref="Popup"/> when the mouse leaves the boundaries.
+    /// </param>
+    /// <param name="minWidth">The minimum width to render, no matter the content choice.</param>
+    public AnimatedContextMenu(bool closeAfterClick = true, bool closeOnMouseLeave = false, double minWidth = 100, Color? shadowColor = null)
     {
         _closeAfterClick = closeAfterClick;
 
+        // If a brush resource named "PopupMenuBrush" is defined we'll
+        // use it, otherwise dark gray to black gradient is the default.
         var brsh = (Brush)Application.Current.TryFindResource("PopupMenuBrush");
 
         // Root for animation
@@ -97,15 +109,20 @@ public class AnimatedContextMenu : Menu
             RenderTransformOrigin = new Point(0.5, 0),
             RenderTransform = _scale,
             Opacity = 0,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
+        };
+
+        // Add shadow if requested
+        if (shadowColor != null)
+        {
+            _root.Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                Color = Colors.Navy,
+                Color = (Color)shadowColor,
                 Direction = 310,
                 ShadowDepth = 6,
                 Opacity = 0.5,
                 BlurRadius = 7
-            }
-        };
+            };
+        }
 
         // IMPORTANT: Use an ItemsPresenter inside a ControlTemplate-like scope by setting the
         // TemplatedParent via VisualTreeHelper is not possible here, so we mirror items with

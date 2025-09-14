@@ -144,7 +144,7 @@ public partial class MainWindow : Window
         #endregion
 
         #region [Custom menu control]
-        _menu = new AnimatedContextMenu(closeOnMouseLeave: false);
+        _menu = new AnimatedContextMenu(closeOnMouseLeave: true, shadowColor: Colors.Navy);
         var img1 = new Image
         {
             //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
@@ -1079,13 +1079,13 @@ public partial class MainWindow : Window
 
 
     /// <summary>
-    /// For <see cref="AnimatedContextMenu"/>
+    /// For <see cref="AnimatedContextMenu"/> anchoring.
     /// </summary>
     void CustomMenu_Click(object sender, MouseButtonEventArgs e)
     {
         var ctrl = sender as UIElement;
         if (ctrl == null || _menu == null) { return; }
         _menu.PlacementTarget = ctrl;
-        _menu.IsOpen = true;
+        _menu.IsOpen = true; // trigger the AnimatedContextMenu to open
     }
 }
