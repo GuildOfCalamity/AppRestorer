@@ -18,5 +18,7 @@
 
 ![CustomDialog](./Screenshot2.png)
 
+## Revamped look
+
 ![Rework](./Screenshot3.png)
 
