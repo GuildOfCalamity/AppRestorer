@@ -82,7 +82,7 @@ public class AnimatedContextMenu : Menu
     /// </summary>
     /// <param name="closeAfterClick">
     /// When an item is selected, if it is not bound to an <see cref="System.Windows.Input.ICommand"/>, 
-    /// then the menu can remain open. Set this to <c>false</c> to always clock after and item is clicked.
+    /// then the menu can remain open. Set this to <c>false</c> to always close after an item is clicked.
     /// </param>
     /// <param name="closeOnMouseLeave">
     /// Set this to <c>true</c> to auto-close the <see cref="Popup"/> when the mouse leaves the boundaries.
