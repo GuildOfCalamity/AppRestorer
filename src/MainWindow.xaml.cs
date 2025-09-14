@@ -153,7 +153,6 @@ public partial class MainWindow : Window
             Width = 20,
             Height = 20
         };
-        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Test", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Item", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Debug", Command = _vm!.DebugCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = MenuIconFactory.CreateRandom() });
