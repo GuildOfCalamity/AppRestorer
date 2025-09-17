@@ -10,9 +10,9 @@ namespace AppRestorer.Controls;
 
 /// <summary>
 ///   The purpose of this control is to provide a context menu with open AND close animations.
-///   The standard WPF <c>ContextMenu</c> does not support a close animation directly, 
-///   since it only exposes a <c>Closed</c> event, by then the visual tree is torn down 
-///   and animations wouldn't be relevant.
+///   The standard WPF <see cref="ContextMenu"/> does not support a closing animation directly, 
+///   since it only exposes a <see cref="ContextMenu.Closed"/> event, by then the visual tree 
+///   is torn down and animations wouldn't be relevant.
 /// </summary>
 /// <remarks>
 ///   In this demo the <see cref="AnimatedContextMenu"/> is used in tandem with the 
@@ -147,6 +147,7 @@ public class AnimatedContextMenu : Menu
         // Forward native popup closed to our routed Closed (when not our animated close)
         _popup.Closed += (_, __) =>
         {
+            Debug.WriteLine("[INFO] Popup Closed");
             if (!_isClosing)
             {
                 RaiseEvent(new RoutedEventArgs(ClosedEvent));
@@ -156,7 +157,7 @@ public class AnimatedContextMenu : Menu
         // If Popup.StaysOpen=false, then this is not needed, but just in case.
         _popup.LostMouseCapture += (_, __) =>
         {
-            Debug.WriteLine("[INFO] Popup LostFocus");
+            Debug.WriteLine("[INFO] Popup LostMouseCapture");
             if (!_isClosing)
                 CloseMenu();
         };
@@ -237,7 +238,6 @@ public class AnimatedContextMenu : Menu
         _scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleDown);
         _scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleDown);
     }
-
 
     void AttachCloseOnClickHandlers()
     {

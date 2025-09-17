@@ -202,9 +202,8 @@ public static class Extensions
     /// <returns>"today at 9:00 AM"</returns>
     public static string DescribeDayAndTime(DateTimeOffset target, CultureInfo culture)
     {
-        return DescribeDayAndTime(DateTimeOffset.Now, target, culture);
+        return DescribeDayAndTime(DateTimeOffset.Now, target, culture ?? System.Globalization.CultureInfo.CurrentCulture);
     }
-
     static string DescribeDayAndTime(DateTimeOffset now, DateTimeOffset target, CultureInfo culture)
     {
         DateTime today = now.Date;
@@ -225,7 +224,7 @@ public static class Extensions
         return $"{dayPart} at {timePart}";
     }
 
-    static string DescribeRelative(TimeSpan delta)
+    public static string DescribeRelative(TimeSpan delta)
     {
         if (delta < TimeSpan.FromSeconds(1))
             return "now";
@@ -270,13 +269,10 @@ public static class Extensions
     /// <summary>
     /// Generates a random <see cref="System.Windows.Media.Color"/>.
     /// </summary>
-    /// <returns><see cref="System.Windows.Media.Color"/></returns>
+    /// <returns><see cref="System.Windows.Media.Color"/> with 255 alpha</returns>
     public static System.Windows.Media.Color GenerateRandomColor()
     {
-        byte r = (byte)Random.Shared.Next(0, 256);
-        byte g = (byte)Random.Shared.Next(0, 256);
-        byte b = (byte)Random.Shared.Next(0, 256);
-        return System.Windows.Media.Color.FromRgb(r, g, b);
+        return System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(0, 256), (byte)Random.Shared.Next(0, 256), (byte)Random.Shared.Next(0, 256));
     }
 
     /// <summary>
@@ -321,7 +317,7 @@ public static class Extensions
     /// <summary>
     /// Generates a random <see cref="SolidColorBrush"/>.
     /// </summary>
-    /// <returns><see cref="SolidColorBrush"/></returns>
+    /// <returns><see cref="SolidColorBrush"/> with 255 alpha</returns>
     public static SolidColorBrush CreateRandomBrush()
     {
         byte r = (byte)Random.Shared.Next(0, 256);
@@ -461,7 +457,7 @@ public static class Extensions
     /// <summary>
     /// Generates a random <see cref="SolidColorBrush"/> based on a given dictionary of <see cref="ColorTilt"/>s.
     /// </summary>
-    public static SolidColorBrush GetRandomLightBrush(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength = 30, byte alpha = 255)
+    public static SolidColorBrush CreateRandomLightBrush(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength = 30, byte alpha = 255)
     {
         double hue = GetBlendedTiltedHue(tiltWeights, tiltStrength);
         double saturation = Lerp(0.65, 1.0, Random.Shared.NextDouble()); // high saturation to avoid gray
@@ -472,7 +468,7 @@ public static class Extensions
     /// <summary>
     /// Generates a random <see cref="SolidColorBrush"/> based on a given dictionary of <see cref="ColorTilt"/>s.
     /// </summary>
-    public static SolidColorBrush GetRandomDarkBrush(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength = 30, byte alpha = 255)
+    public static SolidColorBrush CreateRandomDarkBrush(Dictionary<ColorTilt, double> tiltWeights, double tiltStrength = 30, byte alpha = 255)
     {
         double hue = GetBlendedTiltedHue(tiltWeights, tiltStrength);
         double saturation = Lerp(0.65, 1.0, Random.Shared.NextDouble()); // high saturation to avoid gray
@@ -630,6 +626,74 @@ public static class Extensions
         return newBrush;
     }
 
+    /// <summary><code>
+    ///  /* Brighten by 20%, no saturation change */
+    ///  var brighter = Extensions.AdjustBrush(baseBrush, brightnessDelta: 0.2);
+    ///  /* Darken by 30%, mute by 20% */
+    ///  var darkerMuted = Extensions.AdjustBrush(baseBrush, brightnessDelta: -0.3, saturationDelta: -0.2);
+    ///  /* Keep brightness, boost saturation */
+    ///  var vivid = Extensions.AdjustBrush(baseBrush, saturationDelta: 0.3);
+    /// </code></summary>
+    public static SolidColorBrush AdjustBrush(SolidColorBrush brush, double brightnessDelta = 0.0, double saturationDelta = 0.0)
+    {
+        if (brush == null)
+            throw new ArgumentNullException(nameof(brush));
+
+        Color color = brush.Color;
+
+        // Convert to HSV
+        double h, s, v;
+        RgbToHsv(color.R, color.G, color.B, out h, out s, out v);
+
+        // Apply deltas
+        v = Math.Max(0.0, Math.Min(1.0, v + brightnessDelta));
+        s = Math.Max(0.0, Math.Min(1.0, s + saturationDelta));
+
+        // Convert back to RGB
+        var (r, g, b) = HsvToRgb(h, s, v);
+
+        var adjusted = new SolidColorBrush(Color.FromArgb(color.A, r, g, b));
+        if (adjusted.CanFreeze) { adjusted.Freeze(); }
+        return adjusted;
+    }
+
+    public static SolidColorBrush ShiftSaturation(SolidColorBrush brush, double amount)
+    {
+        if (brush == null)
+            throw new ArgumentNullException(nameof(brush));
+
+        // amount can be positive (more vivid) or negative (more muted)
+        // Clamp to [-1, 1] so we don't overshoot
+        amount = Math.Max(-1, Math.Min(amount, 1));
+
+        Color color = brush.Color;
+
+        // Convert to HSV
+        double h, s, v;
+        RgbToHsv(color.R, color.G, color.B, out h, out s, out v);
+
+        // Adjust saturation
+        s = Math.Max(0.0, Math.Min(1.0, s + amount));
+
+        // Convert back to RGB
+        var (r, g, b) = HsvToRgb(h, s, v);
+
+        var newBrush = new SolidColorBrush(Color.FromArgb(color.A, r, g, b));
+        if (newBrush.CanFreeze) 
+            newBrush.Freeze();
+
+        return newBrush;
+    }
+
+    /// <summary>
+    /// Returns the Euclidean distance between two <see cref="System.Windows.Media.Color"/>s.
+    /// </summary>
+    /// <param name="color1">1st <see cref="System.Windows.Media.Color"/></param>
+    /// <param name="color2">2nd <see cref="System.Windows.Media.Color"/></param>
+    public static double ColorDistance(System.Windows.Media.Color color1, System.Windows.Media.Color color2)
+    {
+        return Math.Sqrt(Math.Pow(color1.R - color2.R, 2) + Math.Pow(color1.G - color2.G, 2) + Math.Pow(color1.B - color2.B, 2));
+    }
     #endregion
 
     /// <summary>
@@ -720,16 +784,6 @@ public static class Extensions
             Debug.WriteLine($"[ERROR] GetDerivedClasses: {ex.Message}");
         }
         return derivedClasses;
-    }
-
-    /// <summary>
-    /// Returns the Euclidean distance between two <see cref="System.Windows.Media.Color"/>s.
-    /// </summary>
-    /// <param name="color1">1st <see cref="System.Windows.Media.Color"/></param>
-    /// <param name="color2">2nd <see cref="System.Windows.Media.Color"/></param>
-    public static double ColorDistance(System.Windows.Media.Color color1, System.Windows.Media.Color color2)
-    {
-        return Math.Sqrt(Math.Pow(color1.R - color2.R, 2) + Math.Pow(color1.G - color2.G, 2) + Math.Pow(color1.B - color2.B, 2));
     }
 
     /// <summary>
@@ -1658,7 +1712,9 @@ public static class Extensions
     /// </summary>
     /// <param name="updatingFlag">The boolean property flag defining if the command is already running. This variable must be a property.</param>
     /// <param name="action">The action to run if the command is not already running.</param>
-    /// <returns></returns>
+    /// <remakes>
+    /// The flag must be a property, not a field, so that the expression tree can get/set the value.
+    /// </remarks>
     public static async Task RunCommandAsync(System.Linq.Expressions.Expression<Func<bool>> updatingFlag, Func<Task> action)
     {
         // Check if the flag property is true (meaning the function is already running)
@@ -1970,6 +2026,138 @@ public static class Extensions
             }
         }
         return found;
+    }
+}
+
+/// <summary>
+/// A chainable brush helper class.
+/// </summary>
+public class BrushAdjustmentChain
+{
+    readonly Color _originalColor;
+    double _h, _s, _v;
+
+    public BrushAdjustmentChain(Color color)
+    {
+        _originalColor = color;
+        RgbToHsv(color.R, color.G, color.B, out _h, out _s, out _v);
+    }
+
+    public static BrushAdjustmentChain From(SolidColorBrush brush)
+    {
+        if (brush == null)
+            throw new ArgumentNullException(nameof(brush));
+
+        return new BrushAdjustmentChain(brush.Color);
+    }
+
+    public BrushAdjustmentChain Brighten(double amount)
+    {
+        _v = ClampLocal(_v + amount);
+        return this;
+    }
+
+    public BrushAdjustmentChain Darken(double amount)
+    {
+        _v = ClampLocal(_v - amount);
+        return this;
+    }
+
+    public BrushAdjustmentChain Saturate(double amount)
+    {
+        _s = ClampLocal(_s + amount);
+        return this;
+    }
+
+    public BrushAdjustmentChain Desaturate(double amount)
+    {
+        _s = ClampLocal(_s - amount);
+        return this;
+    }
+
+    public BrushAdjustmentChain ShiftHue(double degrees)
+    {
+        _h = (_h + degrees) % 360;
+        if (_h < 0) _h += 360;
+        return this;
+    }
+
+    public SolidColorBrush Apply()
+    {
+        var (r, g, b) = HsvToRgb(_h, _s, _v);
+        var brush = new SolidColorBrush(Color.FromArgb(_originalColor.A, r, g, b));
+        if (brush.CanFreeze) { brush.Freeze(); }
+        return brush;
+    }
+
+    public string ToHex(bool includeAlpha = false)
+    {
+        var (r, g, b) = HsvToRgb(_h, _s, _v);
+        byte a = _originalColor.A;
+        return includeAlpha ? $"#{a:X2}{r:X2}{g:X2}{b:X2}" : $"#{r:X2}{g:X2}{b:X2}";
+    }
+
+    static double ClampLocal(double value) => Math.Max(0.0, Math.Min(1.0, value));
+
+    static (byte r, byte g, byte b) HsvToRgb(double h, double s, double v)
+    {
+        // h: [0,360), s,v: [0,1]
+        if (s <= 0.00001)
+        {
+            // If saturation is approx zero then return achromatic (grey)
+            byte grey = (byte)Math.Round(v * 255.0);
+            return (grey, grey, grey);
+        }
+
+        h = (h % 360 + 360) % 360; // normalize
+        double c = v * s;
+        double x = c * (1 - Math.Abs((h / 60.0) % 2 - 1));
+        double m = v - c;
+
+        //double (r1, g1, b1) = h switch
+        //{
+        //    < 60 => (c, x, 0),
+        //    < 120 => (x, c, 0),
+        //    < 180 => (0, c, x),
+        //    < 240 => (0, x, c),
+        //    < 300 => (x, 0, c),
+        //    _ => (c, 0, x)
+        //};
+        double r1, g1, b1;
+        if (h < 60) { r1 = c; g1 = x; b1 = 0; }
+        else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+        else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+        else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+        else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+        else { r1 = c; g1 = 0; b1 = x; }
+        byte r = (byte)Math.Round((r1 + m) * 255.0);
+        byte g = (byte)Math.Round((g1 + m) * 255.0);
+        byte b = (byte)Math.Round((b1 + m) * 255.0);
+        return (r, g, b);
+    }
+
+    static void RgbToHsv(byte r, byte g, byte b, out double h, out double s, out double v)
+    {
+        double rd = r / 255.0;
+        double gd = g / 255.0;
+        double bd = b / 255.0;
+
+        double max = Math.Max(rd, Math.Max(gd, bd));
+        double min = Math.Min(rd, Math.Min(gd, bd));
+        double delta = max - min;
+
+        // Hue
+        if (delta < 0.00001) { h = 0; }
+        else if (max == rd) { h = 60 * (((gd - bd) / delta) % 6); }
+        else if (max == gd) { h = 60 * (((bd - rd) / delta) + 2); }
+        else { h = 60 * (((rd - gd) / delta) + 4); }
+        if (h < 0) { h += 360; }
+
+        // Saturation
+        s = (max <= 0) ? 0 : delta / max;
+
+        // Value
+        v = max;
     }
 }
 

@@ -40,6 +40,8 @@
             <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
             <Color x:Key="Secondary">#002F50</Color>
             <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}" />
+            <Color x:Key="Outline">#B0B0B0</Color>
+            <SolidColorBrush x:Key="OutlineBrush" Color="{StaticResource Outline}" />
             <Color x:Key="BackgroundDark">#FF101012</Color>
             <SolidColorBrush x:Key="BackgroundDarkBrush" Color="{StaticResource BackgroundDark}" />
             <Color x:Key="BackgroundLight">#FF999999</Color>

@@ -1,0 +1,41 @@
+﻿<UserControl
+    x:Class="AppRestorer.Controls.ColorPreview"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AppRestorer.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="42"
+    d:DesignWidth="42"
+    mc:Ignorable="d">
+    <Grid Margin="2">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="40" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <!--  Swatch  -->
+        <Rectangle
+            Grid.Column="0"
+            Width="32"
+            Height="32"
+            Fill="{Binding Brush, Mode=OneWay, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Stroke="WhiteSmoke"
+            StrokeThickness="1" />
+        <!--  Label + HexCode  -->
+        <StackPanel
+            Grid.Column="1"
+            Margin="2,0,0,0"
+            VerticalAlignment="Center">
+            <TextBlock
+                FontSize="12"
+                FontWeight="Bold"
+                Foreground="White"
+                Text="{Binding Title, Mode=OneWay, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            <TextBlock
+                FontSize="11"
+                Foreground="Gray"
+                Text="{Binding HexCode, Mode=OneWay, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+        </StackPanel>
+    </Grid>
+
+</UserControl>

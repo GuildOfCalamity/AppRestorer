@@ -107,7 +107,8 @@ public partial class App : Application
     void CurrentDomain_FirstChanceException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
     {
         if (!string.IsNullOrEmpty(e.Exception.Message) &&
-            !e.Exception.Message.StartsWith("A task was canceled", StringComparison.OrdinalIgnoreCase) &&
+            !e.Exception.Message.Contains("A task was canceled", StringComparison.OrdinalIgnoreCase) &&
+            !e.Exception.Message.Contains("'local' does not map to a namespace", StringComparison.OrdinalIgnoreCase) &&
             !e.Exception.Message.Contains($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.XmlSerializers"))
         {
             var str = $"[WARNING] First chance exception: {e.Exception.Message}";

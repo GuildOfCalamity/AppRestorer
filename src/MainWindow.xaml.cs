@@ -11,8 +11,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using AppRestorer.Controls;
+using static AppRestorer.Extensions;
 
 namespace AppRestorer;
 
@@ -34,12 +36,14 @@ public partial class MainWindow : Window
     string? _voiceName;
     string? _stopService;
     DateTime _lastUse;
+    DateTime _lastCheck;
     App? _app;
     List<RestoreItem>? _appList;
     DispatcherTimer? _timer;
     MainViewModel? _vm;
     ExplorerDialogCloser? _closer;
     AnimatedContextMenu? _menu;
+    PropertyWatcher? _propWatcher;
     CancellationTokenSource _cts = new CancellationTokenSource();
     LinearGradientBrush _lvl0 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(120, 120, 120));
     LinearGradientBrush _lvl1 = Extensions.CreateGradientBrush(Color.FromRgb(255, 255, 255), Color.FromRgb(0, 181, 255));
@@ -53,7 +57,7 @@ public partial class MainWindow : Window
         Debug.WriteLine($"{System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{System.Reflection.MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
 
         InitializeComponent();
-        
+
         // We'll pass the MainWindow to the VM so common Window events will become simpler to work with.
         this.DataContext = new MainViewModel(this);
 
@@ -138,13 +142,14 @@ public partial class MainWindow : Window
             {
                 _vm?.SaveRunningApps();
             }
+            _lastCheck = DateTime.Now + _timer.Interval;
             UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
         };
         _timer.Start();
         #endregion
 
         #region [Custom menu control]
-        _menu = new AnimatedContextMenu(closeOnMouseLeave: true, shadowColor: Colors.Navy);
+        _menu = new AnimatedContextMenu(shadowColor: Colors.Navy);
         var img1 = new Image
         {
             //Source = new BitmapImage(new Uri("pack://application:,,,/AppRestorer;component/Assets/MenuArrowRight.png", UriKind.Absolute)),
@@ -153,10 +158,11 @@ public partial class MainWindow : Window
             Width = 20,
             Height = 20
         };
-        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Item", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
-        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Debug", Command = _vm!.DebugCommand, Icon = MenuIconFactory.CreateRandom() });
-        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = MenuIconFactory.CreateRandom() });
-        _menu.Items.Add(new MenuItem { FontSize = 14d, Header = "Close", Command = _vm!.CloseCommand, Icon = MenuIconFactory.Create("Close", null, new SolidColorBrush(Color.FromRgb(250, 10, 30))) });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Item", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Debug", Command = _vm!.DebugCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Listing", Command = _vm!.AnalyzeCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = MenuIconFactory.Create("Download", null, Extensions.CreateRandomLightBrush(ColorTilt.Green)) });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Close", Command = _vm!.CloseCommand, Icon = MenuIconFactory.Create("Close", null, new SolidColorBrush(Color.FromRgb(250, 10, 30))) });
         #endregion
 
         // EventBus demonstration
@@ -197,6 +203,12 @@ public partial class MainWindow : Window
         //    autoClose: TimeSpan.FromSeconds(3),
         //    assetName: "AlertIcon2.png", assetOpacity: 0.3,
         //    owner: null);
+
+        //_propWatcher = new PropertyWatcher(cp1);
+        //_propWatcher.Watch(ColorPreview.BrushProperty, (s, args) =>
+        //{
+        //    Debug.WriteLine($"[INFO] {nameof(ColorPreview.BrushProperty)} was changed on {s?.GetType()?.Name} which is of type {s?.GetType()?.BaseType?.Name}.");
+        //});
 
         UpdateText(tbStatus, $"Loading…");
 
@@ -262,12 +274,18 @@ public partial class MainWindow : Window
         }
 
         if (_timer != null)
+        {
+            _lastCheck = DateTime.Now + _timer.Interval;
             UpdateText(tbStatus, $"Next check will occur {_timer.Interval.DescribeFutureTime()}");
+        }
     }
 
     void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
         _vm!.IsBusy = false;
+
+        _propWatcher?.Dispose();
+        _propWatcher = null;
 
         // Cancel any pending tasks
         if (!_cts.IsCancellationRequested)
@@ -296,6 +314,12 @@ public partial class MainWindow : Window
         {
             UpdateText(tbStatus, $"No apps to restore at {DateTime.Now.ToLongTimeString()}");
             return;
+        }
+
+        var fe = e.Source as FrameworkElement;
+        if (fe != null)
+        {
+            Debug.WriteLine($"[EVENT] Name '{(string.IsNullOrEmpty(fe.Name) ? "N/A" : fe.Name)}' of type {e.Source.GetType()} with strategy {e.RoutedEvent.RoutingStrategy}");
         }
 
         // You can force an update to the control's visual state by using the CommandManager.
@@ -459,6 +483,60 @@ public partial class MainWindow : Window
     void Spinner_Click(object sender, RoutedEventArgs e) => UpdateText(tbStatus, $"{App.RuntimeInfo}", 1);
     void Spinner_MouseDown(object sender, MouseButtonEventArgs e) => UpdateText(tbStatus, $"{App.RuntimeInfo}", 1);
 
+    void TitleBar_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {   // Optional: double-click to maximize/restore
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
+        else
+        {
+            //DragMove();
+        }
+
+    }
+
+    void TitleBarMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is ContextMenu menu &&
+                menu.Template.FindName("MenuRoot", menu) is Border root &&
+                menu.Template.FindName("MenuScale", menu) is ScaleTransform scale)
+        {
+            // Reset starting state
+            root.Opacity = 0; scale.ScaleX = 0.90; scale.ScaleY = 0.90;
+            // Fade in (opacity)
+            var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            // Scale up (X/Y from 90% to 100%)
+            var scaleX = new DoubleAnimation(0.90, 1, TimeSpan.FromMilliseconds(250))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            var scaleY = new DoubleAnimation(0.90, 1, TimeSpan.FromMilliseconds(250))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            // Start animations
+            root.BeginAnimation(UIElement.OpacityProperty, fade);
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleX);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleY);
+        }
+
+    }
+
+    /// <summary>
+    /// For <see cref="AnimatedContextMenu"/> anchoring.
+    /// </summary>
+    void CustomMenu_Click(object sender, MouseButtonEventArgs e)
+    {
+        var ctrl = sender as UIElement;
+        if (ctrl == null || _menu == null) { return; }
+        _menu.PlacementTarget = ctrl;
+        _menu.IsOpen = true; // trigger the AnimatedContextMenu to open
+    }
+
     /// <summary>
     /// For <see cref="EventBus"/> demonstration. 
     /// Currently this is not used for any real functionality.
@@ -472,15 +550,62 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrEmpty($"{e.Payload}"))
                 return;
+
             if ($"{e.Payload}".StartsWith("stopping service", StringComparison.OrdinalIgnoreCase))
+            {
                 AnnounceMessage($"{e.Payload}", 50);
+            }
+            else if ($"{e.Payload}".StartsWith("[TEXT]"))
+            {
+                UpdateText(tbStatus, $"{e.Payload}".Replace("[TEXT]", ""));
+            }
+            else if ($"{e.Payload}".StartsWith("[TIME]"))
+            {
+                //cp1.Title = $"{DateTime.Now.Ticks}";
+                UpdateText(tbStatus, $"Next check {Extensions.DescribeRelative(_lastCheck - DateTime.Now)}");
+            }
             else
+            {
                 UpdateText(tbStatus, $"{e.Payload}", Random.Shared.Next(0, 5));
+                //TaskRunnerWithProgressReport();
+            }
         }
+        else if (e.Payload.GetType() == typeof(RestoreItem))
+            Debug.WriteLine($"[EVENTBUS] RestoreItem at location '{((RestoreItem)e.Payload).Location}'");
         else
             Debug.WriteLine($"[EVENTBUS] Received event bus message of type '{e.Payload.GetType()}'");
     }
 
+    void TapHandler(object sender, RoutedEventArgs e)
+    {
+        UpdateText(tbStatus, $"Opening custom menu {DateTime.Now.ToLongTimeString()}");
+        var ctrl = sender as UIElement;
+        if (ctrl == null || _menu == null) { return; }
+        _menu.PlacementTarget = ctrl;
+        _menu.IsOpen = true; // trigger the AnimatedContextMenu to open
+    }
+
+    /// <summary>
+    /// Top-level scenario for routed events.
+    /// </summary>
+    void CommonClickHandler(object sender, RoutedEventArgs e)
+    {
+        var feSource = e.Source as FrameworkElement;
+        switch (feSource?.Name)
+        {
+            case "Yes":
+                Debug.WriteLine($"RoutedEvent: {feSource.Name} ({e.Source.GetType()})");
+                break;
+            case "No":
+                Debug.WriteLine($"RoutedEvent: {feSource.Name} ({e.Source.GetType()})");
+                break;
+            case "Cancel":
+                Debug.WriteLine($"RoutedEvent: {feSource.Name} ({e.Source.GetType()})");
+                break;
+        }
+        e.Handled = true;
+
+    }
     #endregion
 
     #region [Helpers]
@@ -685,6 +810,102 @@ public partial class MainWindow : Window
     #endregion
 
     #region [Superfluous]
+    public void TestBrushChainHelper()
+    {
+        SolidColorBrush? baseBrush = new SolidColorBrush(Color.FromRgb(120, 80, 200));
+
+        // Brighten by 15%, and saturate slightly
+        SolidColorBrush? hoverBrush = BrushAdjustmentChain
+            .From(baseBrush)
+            .Brighten(0.15)
+            .Saturate(0.2)
+            .Apply();
+
+        // Darken by 25%, and desaturate slightly
+        SolidColorBrush? disabledBrush = BrushAdjustmentChain
+            .From(baseBrush)
+            .Darken(0.25)
+            .Desaturate(0.3)
+            .Apply();
+
+        // Shift hue by +30°, brighten slightly, and boost saturation
+        SolidColorBrush? hoverBrush2 = BrushAdjustmentChain
+            .From(baseBrush)
+            .ShiftHue(30)
+            .Brighten(0.1)
+            .Saturate(0.2)
+            .Apply();
+
+        // Shift hue by -60°, darken, and desaturate
+        SolidColorBrush? disabledBrush2 = BrushAdjustmentChain
+            .From(baseBrush)
+            .ShiftHue(-60)
+            .Darken(0.2)
+            .Desaturate(0.3)
+            .Apply();
+
+        // Hex output helper (can be used for saving in config)
+        string? hex = BrushAdjustmentChain
+            .From(new SolidColorBrush(Color.FromRgb(100, 150, 200)))
+            .Brighten(0.1)
+            .Saturate(0.2)
+            .ShiftHue(30)
+            .ToHex(); // "#78C8E0"
+    }
+
+    public async void TaskRunnerWithProgressReport()
+    {
+        int counter = 0;
+        var progress = new Progress<int>(p => { UpdateText(tbStatus, $"Analyzing process #{p}"); });
+
+        var runner = new TaskRunner<int>(async prog =>
+        {
+            foreach (var proc in Process.GetProcesses())
+            {
+                await Task.Delay(10);
+                prog?.Report(++counter);
+                //if (Random.Shared.Next(1, 20) == 1) { throw new Exception("A simulated random failure."); }
+            }
+        }, "Process Task", progress);
+
+        runner.TaskCompleted += (s, e) =>
+        {
+            UpdateText(tbStatus, $"Task '{e.TaskName}' finished.  Duration: {e.Duration.ToReadableTime()}.  Success: {e.Success}.  Canceled: {e.Canceled}");
+        };
+
+        await runner.RunAsync();
+    }
+
+    public async void TaskRunnerWithoutProgressReport()
+    {
+        var cts = new CancellationTokenSource();
+        var runner = new TaskRunner(() =>
+        {
+            try
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    Task.Delay(500, cts.Token).Wait();
+                    UpdateText(tbStatus, $"Step {i + 1}");
+                }
+            }
+            catch (AggregateException)
+            {
+                UpdateText(tbStatus, "For loop was canceled.");
+            }
+        }, "Cancelable Task");
+
+        runner.TaskCompleted += (s, e) =>
+        {
+            // Task 'Cancelable Task' completed. Success: True, Canceled: False
+            UpdateText(tbStatus, $"Task '{e.TaskName}' finished.  Duration: {e.Duration.ToReadableTime()}.  Success: {e.Success}.  Canceled: {e.Canceled}");
+        };
+
+        var runTask = runner.RunAsync(cts.Token);
+        cts.CancelAfter(1500); // Cancel after some time
+        await runTask;
+    }
+
     /// <summary>
     /// SAPI still works in Win10/11
     /// </summary>
@@ -855,10 +1076,10 @@ public partial class MainWindow : Window
             var rez = shell?.Popup(message, 3, "Notice", dlgType);
             if (rez != null)
             {
-                if ((int)rez == 1)
-                    Debug.WriteLine($"Button 1 pressed");
-                else if ((int)rez == 2)
-                    Debug.WriteLine($"Button 2 pressed");
+                if (rez is int i)
+                {
+                    Debug.WriteLine($"Button {i} pressed");
+                }
             }
             // Cleanup
             if (shell != null && System.Runtime.InteropServices.Marshal.IsComObject(shell))
@@ -893,32 +1114,22 @@ public partial class MainWindow : Window
         catch { /* Ignore */ }
     }
 
-    void RunCommand()
+    public bool FlagProperty { get; set; } = false; // e.g. could be ViewModel.IsBusy
+    public void RunCommand()
     {
-        Extensions.RunCommandAsync(() => _vm!.IsBusy, async () =>
+        Extensions.RunCommandAsync(() => FlagProperty, async () =>
         {
-            //Extensions.InvokeIf(() => { /* UI update */ });
-            
-            AnnounceMessage("Begin Command");
-
-            /** The old-school way **/
-            //ThreadPool.QueueUserWorkItem(o => _ = RunFileTasks(tok));
-
-            /** The new-school way **/
-            //var tsk = Task.Run(async () => await RunFileTasks(tok));
-
-            // Wait for remaining tasks to complete...
-            //await Task.WhenAll(tsk).ContinueWith(tsk => { Debug.WriteLine($"[Task Status: {tsk.Status}]"); });
-
-            // Small delay after finish
-            //await Task.Delay(300, tok);
+            UpdateText(tbStatus, "Begin Command");
+            await Task.Delay(2000);
+            UpdateText(tbStatus, $"Command Complete");
 
         }).ContinueWith(t =>
         {
-            AnnounceMessage($"Command Complete: {t.Status}");
-            // Ensure that the FrameworkElement's visual state is updated.
-            this.Dispatcher.Invoke(new Action(CommandManager.InvalidateRequerySuggested));
+            UpdateText(tbStatus, $"RunCommand Status: {t.Status}");
         });
+    
+        // Ensure that the FrameworkElement's visual state is updated.
+        //this.Dispatcher.Invoke(new Action(CommandManager.InvalidateRequerySuggested));
     }
 
     async void RunTimedTaskTests()
@@ -1033,59 +1244,4 @@ public partial class MainWindow : Window
 
     }
     #endregion
-
-    void TitleBar_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ClickCount == 2)
-        {   // Optional: double-click to maximize/restore
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        }
-        else
-        {
-            //DragMove();
-        }
-
-    }
-
-    void TitleBarMenu_Opened(object sender, RoutedEventArgs e)
-    {
-        if (sender is ContextMenu menu &&
-                menu.Template.FindName("MenuRoot", menu) is Border root &&
-                menu.Template.FindName("MenuScale", menu) is ScaleTransform scale)
-        {
-            // Reset starting state
-            root.Opacity = 0; scale.ScaleX = 0.90; scale.ScaleY = 0.90;
-            // Fade in (opacity)
-            var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150))
-            {
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-            };
-            // Scale up (X/Y from 90% to 100%)
-            var scaleX = new DoubleAnimation(0.90, 1, TimeSpan.FromMilliseconds(250))
-            {
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-            };
-            var scaleY = new DoubleAnimation(0.90, 1, TimeSpan.FromMilliseconds(250))
-            {
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-            };
-            // Start animations
-            root.BeginAnimation(UIElement.OpacityProperty, fade);
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleX);
-            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleY);
-        }
-
-    }
-
-
-    /// <summary>
-    /// For <see cref="AnimatedContextMenu"/> anchoring.
-    /// </summary>
-    void CustomMenu_Click(object sender, MouseButtonEventArgs e)
-    {
-        var ctrl = sender as UIElement;
-        if (ctrl == null || _menu == null) { return; }
-        _menu.PlacementTarget = ctrl;
-        _menu.IsOpen = true; // trigger the AnimatedContextMenu to open
-    }
 }

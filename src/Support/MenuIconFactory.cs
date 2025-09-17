@@ -131,7 +131,6 @@ public static class MenuIconFactory
         { "DeleteFilled", "M4,4 L12,4 L11,14 L5,14 Z M6,2 L10,2 L10,4 L6,4 Z" }
     };
 
-
     /// <summary>
     /// Creates a Path icon by name.
     /// <code>
@@ -231,33 +230,49 @@ public static class MenuIconFactory
         var randomKey = _icons.Keys.ElementAt(Random.Shared.Next(_icons.Count));
         Debug.WriteLine($"[INFO] Random factory icon '{randomKey}'");
 
-        //return Create(randomKey, size, Extensions.CreateRandomLightBrush());
+        if (fill != null)
+        {
+            return Create(randomKey, size, fill);
+        }
+        else
+        {
+            //return Create(randomKey, size, Extensions.CreateRandomLightBrush());
 
-        // 70% Red — 30% Orange, dark
-        var warmDark = Extensions.GetRandomDarkBrush(new Dictionary<ColorTilt, double>
-        {
-            { ColorTilt.Red, 0.7 },
-            { ColorTilt.Orange, 0.3 }
-        });
-        // 70% Red — 30% Orange, bright
-        var warmLight = Extensions.GetRandomLightBrush(new Dictionary<ColorTilt, double>
-        {
-            { ColorTilt.Red, 0.7 },
-            { ColorTilt.Orange, 0.3 }
-        });
-        // 50% Blue — 40% Purple, dark
-        var coolDark = Extensions.GetRandomDarkBrush(new Dictionary<ColorTilt, double>
-        {
-            { ColorTilt.Blue, 0.5 },
-            { ColorTilt.Purple, 0.4 }
-        });
-        // 50% Blue — 40% Purple, light
-        var coolLight = Extensions.GetRandomLightBrush(new Dictionary<ColorTilt, double>
-        {
-            { ColorTilt.Blue, 0.5 },
-            { ColorTilt.Purple, 0.4 }
-        });
-        return Create(randomKey, size, coolLight);
+            // 70% Red — 30% Orange, dark
+            var warmDark = Extensions.CreateRandomDarkBrush(new Dictionary<ColorTilt, double>
+            {
+                { ColorTilt.Red, 0.7 },
+                { ColorTilt.Orange, 0.3 }
+            });
+            // 70% Red — 30% Orange, bright
+            var warmLight = Extensions.CreateRandomLightBrush(new Dictionary<ColorTilt, double>
+            {
+                { ColorTilt.Red, 0.7 },
+                { ColorTilt.Orange, 0.3 }
+            });
+            // 50% Blue — 40% Purple, dark
+            var coolDark = Extensions.CreateRandomDarkBrush(new Dictionary<ColorTilt, double>
+            {
+                { ColorTilt.Blue, 0.5 },
+                { ColorTilt.Purple, 0.4 }
+            });
+            // 50% Blue — 40% Purple, light
+            var coolLight = Extensions.CreateRandomLightBrush(new Dictionary<ColorTilt, double>
+            {
+                { ColorTilt.Blue, 0.5 },
+                { ColorTilt.Purple, 0.4 }
+            });
+
+            var verdeLight = Extensions.CreateRandomLightBrush(ColorTilt.Green);
+
+            // Make it more vivid by +0.2 saturation
+            //var vivid = Extensions.ShiftSaturation(warmLight, 0.2);
+
+            // Make it more muted by -0.2 saturation
+            //var muted = Extensions.ShiftSaturation(coolLight, -0.2);
+
+            return Create(randomKey, size, verdeLight);
+        }
     }
 
 }

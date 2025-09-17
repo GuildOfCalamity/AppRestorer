@@ -108,6 +108,33 @@ public class MainViewModel : INotifyPropertyChanged
             }
         }
     }
+
+    System.Windows.Media.SolidColorBrush? _binderBrush1;
+    public System.Windows.Media.SolidColorBrush? BinderBrush1
+    {
+        get => _binderBrush1;
+        set
+        {
+            if (_binderBrush1 != value)
+            {
+                _binderBrush1 = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+    System.Windows.Media.SolidColorBrush? _binderBrush2;
+    public System.Windows.Media.SolidColorBrush? BinderBrush2
+    {
+        get => _binderBrush2;
+        set
+        {
+            if (_binderBrush2 != value)
+            {
+                _binderBrush2 = value;
+                OnPropertyChanged();
+            }
+        }
+    }
     #endregion
 
     #region [Commands]
@@ -116,6 +143,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CloseCommand { get; set; }
     public ICommand DebugCommand { get; set; }
     public ICommand MenuCommand { get; set; }
+    public ICommand AnalyzeCommand { get; set; }
     #endregion
 
     public MainViewModel(Window window)
@@ -129,8 +157,24 @@ public class MainViewModel : INotifyPropertyChanged
         CloseCommand = new RelayCommand(() => _window.Close());
         MinimizeCommand = new RelayCommand(() => _window.WindowState = WindowState.Minimized);
         MaximizeCommand = new RelayCommand(() => _window.WindowState ^= WindowState.Maximized);
-        DebugCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"{App.RuntimeInfo}"); });
-        MenuCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"{App.AppDataDirectory}"); });
+        DebugCommand = new RelayCommand(() => 
+        { 
+            App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[TIME]");
+            BinderBrush1 = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256)));
+            BinderBrush2 = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256)));
+        });
+        MenuCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[TEXT]{App.AppDataDirectory}"); });
+        AnalyzeCommand = new RelayCommand(async () => 
+        {
+            IsBusy = !IsBusy;
+            var registryApps = GetStartupApps();
+            foreach (var app in registryApps )
+            {
+                App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[TEXT] Startup ⇨ {app.Name}");
+                await Task.Delay(350);
+            }
+            IsBusy = !IsBusy;
+        });
 
         #region [Control Events]
         EventManager.RegisterClassHandler(typeof(TextBox), TextBox.GotFocusEvent, new RoutedEventHandler(TextBox_GotFocus));
@@ -138,15 +182,6 @@ public class MainViewModel : INotifyPropertyChanged
         EventManager.RegisterClassHandler(typeof(Window), Window.MouseLeaveEvent, new RoutedEventHandler(Window_MouseLeave));
         _window.StateChanged += Window_StateChanged;
         #endregion
-
-        PropertyInfo[] props = this.GetType().GetProperties();
-        foreach (PropertyInfo prop in props)
-        {
-            if (prop == null)
-                continue;
-            if (!_modelDependencies.ContainsKey(prop.Name))
-                _modelDependencies.Add(prop.Name, prop.PropertyType.FullName ?? string.Empty);
-        }
 
         if (_deepDive)
         {
@@ -168,8 +203,17 @@ public class MainViewModel : INotifyPropertyChanged
         if (!App.RootEventBus.IsSubscribed(Constants.EB_ToModel))
             App.RootEventBus.Subscribe(Constants.EB_ToModel, EventBusMessageHandler);
 
+        #region [Reflection]
+        PropertyInfo[] props = this.GetType().GetProperties();
+        foreach (PropertyInfo prop in props)
+        {
+            if (prop == null)
+                continue;
+            if (!_modelDependencies.ContainsKey(prop.Name))
+                _modelDependencies.Add(prop.Name, prop.PropertyType.FullName ?? string.Empty);
+        }
         Debug.WriteLine($"[INFO] Model initialized with {_modelDependencies.Count} dependency properties.");
-        Debug.WriteLine($"[INFO] {CloseCommand}");
+        #endregion
     }
 
     #region [Core Methods]
@@ -178,54 +222,58 @@ public class MainViewModel : INotifyPropertyChanged
         //var runningApps = new List<string>();
         var runningApps = new List<RestoreItem>();
 
-        // Ignore any apps that already start on login
-        var registryApps = GetStartupApps();
-
-        // Collect shell:startup entries
-        var shellStart = StartupAnalyzer.GetShellStartupFilesAndContents();
-
-        // Traverse all running processes
-        foreach (var proc in Process.GetProcesses())
+        try
         {
-            try
-            {
-                // Don't include OS modules/services or firewall/vpn clients, as they typically
-                // start on their own or as needed. These strings can be moved to a config.
+            // Ignore any apps that already start on login
+            var registryApps = GetStartupApps();
 
-                if (proc.MainWindowHandle != IntPtr.Zero && // if no window handle then possibly a service 
-                    !string.IsNullOrEmpty(proc.MainModule?.FileName) &&
-                    !proc.MainModule.FileName.ToLower().Contains("\\cisco") &&       // VPN client
-                    !proc.MainModule.FileName.ToLower().Contains("\\sonicwall") &&   // VPN client
-                    !proc.MainModule.FileName.ToLower().Contains("\\fortigate") &&   // VPN client
-                    !proc.MainModule.FileName.ToLower().Contains("\\windowsapps") && // Outlook, Teams, etc
-                    !proc.MainModule.FileName.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase))
+            // Collect shell:startup entries
+            var shellStart = StartupAnalyzer.GetShellStartupFilesAndContents();
+
+            // Traverse all running processes
+            foreach (var proc in Process.GetProcesses())
+            {
+                try
                 {
-                    // Self, duplicate, and registry startup checks
-                    if (!runningApps.Any(ri => ri.Location.Contains(proc.MainModule.FileName)) &&
-                        !proc.MainModule.FileName.EndsWith(App.GetCurrentAssemblyNameWithExtension(), StringComparison.OrdinalIgnoreCase) &&
-                        !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
+                    // Don't include OS modules/services or firewall/vpn clients, as they typically
+                    // start on their own or as needed. These strings can be moved to a config.
+
+                    if (proc.MainWindowHandle != IntPtr.Zero && // if no window handle then possibly a service 
+                        !string.IsNullOrEmpty(proc.MainModule?.FileName) &&
+                        !proc.MainModule.FileName.ToLower().Contains("\\cisco") &&       // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\sonicwall") &&   // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\fortigate") &&   // VPN client
+                        !proc.MainModule.FileName.ToLower().Contains("\\windowsapps") && // Outlook, Teams, etc
+                        !proc.MainModule.FileName.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase))
                     {
-                        if (_deepDive)
+                        // Self, duplicate, and registry startup checks
+                        if (!runningApps.Any(ri => ri.Location.Contains(proc.MainModule.FileName)) &&
+                            !proc.MainModule.FileName.EndsWith(App.GetCurrentAssemblyNameWithExtension(), StringComparison.OrdinalIgnoreCase) &&
+                            !registryApps.Any(ra => ra.Path.ToLower().Contains(proc.MainModule.FileName.ToLower())))
                         {
-                            if (startupEntries.Any(ent => !string.IsNullOrEmpty(ent.Command) && !ent.Command.Contains("non-exec or no action") && !ent.Command.Contains(proc.MainModule.FileName)))
-                                runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
-                            else
-                                Debug.WriteLine($"[WARNING] {proc.MainModule.FileName} was found as part of the StartupEntries catalog, skipping module.");
-                        }
-                        else
-                        {
-                            var shellFound = shellStart.Any(s => !string.IsNullOrEmpty(s.Value) && s.Value.Contains(proc.MainModule.FileName));
-                            if (!shellFound)
+                            if (_deepDive)
                             {
-                                //runningApps.Add(proc.MainModule.FileName);
-                                runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                                if (startupEntries.Any(ent => !string.IsNullOrEmpty(ent.Command) && !ent.Command.Contains("non-exec or no action") && !ent.Command.Contains(proc.MainModule.FileName)))
+                                    runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                                else
+                                    App.RootEventBus?.Publish(Constants.EB_ToWindow, $"{proc.MainModule.FileName} was found as part of the StartupEntries catalog, skipping module.");
+                            }
+                            else
+                            {
+                                var shellFound = shellStart.Any(s => !string.IsNullOrEmpty(s.Value) && s.Value.Contains(proc.MainModule.FileName));
+                                if (!shellFound)
+                                {
+                                    //runningApps.Add(proc.MainModule.FileName);
+                                    runningApps.Add(new RestoreItem { Location = proc.MainModule.FileName, Favorite = false });
+                                }
                             }
                         }
                     }
                 }
+                catch (Exception) { /* Ignore processes we can't access */ }
             }
-            catch (Exception) { /* Ignore processes we can't access */ }
         }
+        catch (Exception) { /* Ignore */}
 
         return runningApps;
     }

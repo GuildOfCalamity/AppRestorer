@@ -1,0 +1,299 @@
+﻿<UserControl
+    x:Class="AppRestorer.Controls.CandyButton"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AppRestorer.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="50"
+    d:DesignWidth="50"
+    mc:Ignorable="d">
+
+    <!--#region [Ellipse]-->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <!--<local:GlowDecorator
+            Grid.Row="1"
+            Margin="1"
+            BlurRadius="8"
+            CornerRadius="2"
+            Opacity="0.6"
+            PenThickness="2"
+            Color="{Binding ButtonColor, Mode=OneWay, FallbackValue=DodgerBlue, RelativeSource={RelativeSource AncestorType=UserControl}}" />-->
+        <Ellipse
+            x:Name="userEllipse"
+            Grid.Row="0"
+            Width="{Binding ButtonSize, Mode=OneWay, FallbackValue=40, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Height="{Binding ButtonSize, Mode=OneWay, FallbackValue=40, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Cursor="Hand"
+            MouseDown="Control_MouseDown"
+            MouseUp="Control_MouseUp"
+            RenderTransformOrigin="0.5,0.5">
+            <Ellipse.Style>
+                <Style TargetType="{x:Type Ellipse}">
+                    <Setter Property="RenderTransform">
+                        <Setter.Value>
+                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Ellipse.Style>
+            <Ellipse.Fill>
+                <RadialGradientBrush GradientOrigin="0.75,0.25">
+                    <RadialGradientBrush.GradientStops>
+                        <GradientStop Offset="0.0" Color="White" />
+                        <GradientStop Offset="0.5" Color="{Binding ButtonColor, Mode=OneWay, FallbackValue=DodgerBlue, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                        <GradientStop Offset="1.0" Color="Black" />
+                    </RadialGradientBrush.GradientStops>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+            <Ellipse.Triggers>
+                <EventTrigger RoutedEvent="UserControl.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                Storyboard.TargetName="userEllipse"
+                                Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                To="0.9"
+                                Duration="0:0:0.1" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Mouse.MouseEnter">
+                    <EventTrigger.Actions>
+                        <BeginStoryboard Name="mouseEnterBeginStoryboard" HandoffBehavior="Compose">
+                            <Storyboard>
+                                <ParallelTimeline BeginTime="0:0:0">
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                        To="1"
+                                        Duration="00:00:00.12" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                        To="1.03"
+                                        Duration="00:00:00.12" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                        To="1.03"
+                                        Duration="00:00:00.12" />
+                                </ParallelTimeline>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Mouse.MouseLeave">
+                    <EventTrigger.Actions>
+                        <!--<StopStoryboard BeginStoryboardName="mouseEnterBeginStoryboard" />-->
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ParallelTimeline BeginTime="0:0:0">
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                        To="0.9"
+                                        Duration="00:00:00.12" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                        To="1.0"
+                                        Duration="00:00:00.12" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                        To="1.0"
+                                        Duration="00:00:00.12" />
+                                </ParallelTimeline>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Mouse.MouseDown">
+                    <EventTrigger.Actions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ParallelTimeline BeginTime="0:0:0">
+                                    <DoubleAnimation
+                                        AutoReverse="True"
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                        From="1.0"
+                                        To="0.8"
+                                        Duration="00:00:00.12" />
+                                    <DoubleAnimation
+                                        AutoReverse="True"
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                        To="0.96"
+                                        Duration="00:00:00.12" />
+                                    <DoubleAnimation
+                                        AutoReverse="True"
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                        To="0.96"
+                                        Duration="00:00:00.12" />
+                                </ParallelTimeline>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+            </Ellipse.Triggers>
+        </Ellipse>
+        <TextBlock
+            x:Name="userText"
+            Grid.Row="1"
+            Margin="0,1,0,0"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            FontSize="{Binding TextSize, Mode=OneWay, FallbackValue=12, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Foreground="{Binding TextColor, Mode=OneWay, FallbackValue=White, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Text="{Binding Text, Mode=OneWay, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+    </Grid>
+    <!--#endregion-->
+
+    <!--#region [Rectangle]-->
+    <!--<Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Rectangle
+            x:Name="userEllipse"
+            Grid.Row="0"
+            Width="{Binding ButtonSize, Mode=OneWay, FallbackValue=40, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Height="{Binding ButtonSize, Mode=OneWay, FallbackValue=40, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Cursor="Hand"
+            MouseDown="Control_MouseDown"
+            RadiusX="15"
+            RadiusY="15"
+            RenderTransformOrigin="0.5,0.5">
+            <Rectangle.Style>
+                <Style TargetType="{x:Type Rectangle}">
+                    <Setter Property="RenderTransform">
+                        <Setter.Value>
+                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Rectangle.Style>
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="1,0" EndPoint="1,1">
+                    <LinearGradientBrush.GradientStops>
+                        <GradientStop Offset="0.0" Color="White" />
+                        <GradientStop Offset="0.3" Color="{Binding ButtonColor, Mode=OneWay, FallbackValue=DodgerBlue, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                        <GradientStop Offset="0.9" Color="#181818" />
+                        <GradientStop Offset="1.0" Color="Black" />
+                    </LinearGradientBrush.GradientStops>
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+            <Rectangle.Triggers>
+                <EventTrigger RoutedEvent="UserControl.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                Storyboard.TargetName="userEllipse"
+                                Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                To="0.9"
+                                Duration="0:0:0.1" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Mouse.MouseEnter">
+                    <EventTrigger.Actions>
+                        <BeginStoryboard Name="mouseEnterBeginStoryboard" HandoffBehavior="Compose">
+                            <Storyboard>
+                                <ParallelTimeline BeginTime="0:0:0">
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                        To="1"
+                                        Duration="00:00:00.15" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                        To="1.03"
+                                        Duration="00:00:00.15" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                        To="1.03"
+                                        Duration="00:00:00.15" />
+                                </ParallelTimeline>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Mouse.MouseLeave">
+                    <EventTrigger.Actions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ParallelTimeline BeginTime="0:0:0">
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                        To="0.9"
+                                        Duration="00:00:00.15" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                        To="1.0"
+                                        Duration="00:00:00.15" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                        To="1.0"
+                                        Duration="00:00:00.15" />
+                                </ParallelTimeline>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Mouse.MouseDown">
+                    <EventTrigger.Actions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ParallelTimeline BeginTime="0:0:0">
+                                    <DoubleAnimation
+                                        AutoReverse="True"
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="(Ellipse.Fill).(Brush.Opacity)"
+                                        From="1.0"
+                                        To="0.8"
+                                        Duration="00:00:00.15" />
+                                    <DoubleAnimation
+                                        AutoReverse="True"
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                        To="0.96"
+                                        Duration="00:00:00.15" />
+                                    <DoubleAnimation
+                                        AutoReverse="True"
+                                        Storyboard.TargetName="userEllipse"
+                                        Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                        To="0.96"
+                                        Duration="00:00:00.15" />
+                                </ParallelTimeline>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+            </Rectangle.Triggers>
+        </Rectangle>
+        <TextBlock
+            x:Name="userText"
+            Grid.Row="1"
+            Margin="0,1,0,0"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            FontSize="{Binding TextSize, Mode=OneWay, FallbackValue=12, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Foreground="{Binding TextColor, Mode=OneWay, FallbackValue=White, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            Text="{Binding Text, Mode=OneWay, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+    </Grid>-->
+    <!--#endregion-->
+
+</UserControl>
