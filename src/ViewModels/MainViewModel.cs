@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -50,6 +51,7 @@ public class MainViewModel : INotifyPropertyChanged
     bool _deepDive = false;
     public string saveFileName = "apps.json";
     public List<StartupEntry> startupEntries = new List<StartupEntry>();
+    DateTime _lastMouse = DateTime.MinValue; // can be used to trigger stale state (security logout)
     #endregion
 
     #region [Properties]
@@ -160,10 +162,14 @@ public class MainViewModel : INotifyPropertyChanged
         DebugCommand = new RelayCommand(() => 
         { 
             App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[TIME]");
+            // For testing the ColorPreview control.
             BinderBrush1 = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256)));
             BinderBrush2 = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256)));
         });
-        MenuCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[TEXT]{App.AppDataDirectory}"); });
+        MenuCommand = new RelayCommand(() => 
+        { 
+            App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[SETTINGS]"); 
+        });
         AnalyzeCommand = new RelayCommand(async () => 
         {
             IsBusy = !IsBusy;
@@ -371,11 +377,13 @@ public class MainViewModel : INotifyPropertyChanged
     void Window_MouseEnter(object sender, RoutedEventArgs e)
     {
         //var win = sender as System.Windows.Window;
+        _lastMouse = DateTime.Now;
     }
-    
+
     void Window_MouseLeave(object sender, RoutedEventArgs e)
     {
         //var win = sender as System.Windows.Window;
+        _lastMouse = DateTime.Now;
     }
 
     void Window_StateChanged(object? sender, EventArgs e)

@@ -22,7 +22,7 @@ namespace AppRestorer.Controls
         Color previousColor = Colors.DodgerBlue;
         Color disabledColor = Color.FromRgb(120, 120, 120);
 
-        #region [Dependecy Properties]
+        #region [Dependency Properties]
         public Color ButtonColor
         {
             get => (Color)GetValue(ButtonColorProperty);

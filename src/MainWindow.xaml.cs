@@ -158,7 +158,7 @@ public partial class MainWindow : Window
             Width = 20,
             Height = 20
         };
-        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Item", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Settings", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Debug", Command = _vm!.DebugCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Listing", Command = _vm!.AnalyzeCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = MenuIconFactory.Create("Download", null, Extensions.CreateRandomLightBrush(ColorTilt.Green)) });
@@ -168,6 +168,11 @@ public partial class MainWindow : Window
         // EventBus demonstration
         if (!App.RootEventBus.IsSubscribed(Constants.EB_ToWindow))
             App.RootEventBus.Subscribe(Constants.EB_ToWindow, EventBusMessageHandler);
+
+        App.PollService.AddWork(() =>
+        {
+            Debug.WriteLine($"[NOTE] This was an item added at {DateTime.Now.ToLongTimeString()}");
+        }, WorkPriority.Normal);
     }
 
     #region [Events]
@@ -558,6 +563,19 @@ public partial class MainWindow : Window
             else if ($"{e.Payload}".StartsWith("[TEXT]"))
             {
                 UpdateText(tbStatus, $"{e.Payload}".Replace("[TEXT]", ""));
+            }
+            else if ($"{e.Payload}".StartsWith("[SETTINGS]"))
+            {
+                var settings = new SettingsWindow();
+                settings.Owner = this;
+                settings.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                this.Effect = new System.Windows.Media.Effects.BlurEffect()
+                {
+                    KernelType = System.Windows.Media.Effects.KernelType.Gaussian,
+                    Radius = 5
+                };
+                settings.ShowDialog();
+                this.Effect = null;
             }
             else if ($"{e.Payload}".StartsWith("[TIME]"))
             {

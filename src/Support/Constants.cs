@@ -14,4 +14,5 @@ public class Constants
     // EventBus
     public static string EB_ToModel = "Model_Message";
     public static string EB_ToWindow = "Window_Message";
+    public static string EB_ToSettings = "Settings_Message";
 }

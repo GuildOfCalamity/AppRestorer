@@ -75,12 +75,12 @@
                                     <DoubleAnimation
                                         Storyboard.TargetName="userEllipse"
                                         Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
-                                        To="1.03"
+                                        To="1.05"
                                         Duration="00:00:00.12" />
                                     <DoubleAnimation
                                         Storyboard.TargetName="userEllipse"
                                         Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
-                                        To="1.03"
+                                        To="1.05"
                                         Duration="00:00:00.12" />
                                 </ParallelTimeline>
                             </Storyboard>
@@ -129,13 +129,13 @@
                                         AutoReverse="True"
                                         Storyboard.TargetName="userEllipse"
                                         Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
-                                        To="0.96"
+                                        To="0.95"
                                         Duration="00:00:00.12" />
                                     <DoubleAnimation
                                         AutoReverse="True"
                                         Storyboard.TargetName="userEllipse"
                                         Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
-                                        To="0.96"
+                                        To="0.95"
                                         Duration="00:00:00.12" />
                                 </ParallelTimeline>
                             </Storyboard>
@@ -147,7 +147,7 @@
         <TextBlock
             x:Name="userText"
             Grid.Row="1"
-            Margin="0,1,0,0"
+            Margin="0,2,0,0"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             FontSize="{Binding TextSize, Mode=OneWay, FallbackValue=12, RelativeSource={RelativeSource AncestorType=UserControl}}"

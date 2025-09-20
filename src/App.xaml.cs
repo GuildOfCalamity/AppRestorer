@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace AppRestorer;
@@ -15,6 +17,7 @@ public partial class App : Application
     public static string BaseDirectory { get; set; } = string.Empty;
     public static string AppDataDirectory { get; set; } = string.Empty;
     public static EventBus RootEventBus { get; set; } = new();
+    public static PriorityPollingServiceAsync PollService { get; set; } = new();
 
     #region [Overrides]
     protected override void OnStartup(StartupEventArgs e)
@@ -32,13 +35,16 @@ public partial class App : Application
         base.OnStartup(e);
 
         //Current.MainWindow = new MainWindow { Visibility = Visibility.Hidden };
+
+        PollService?.Start(TimeSpan.FromMinutes(5));
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         Debug.WriteLine($"[INFO] App OnExit Event: {e.ApplicationExitCode}");
-        // Moved to MainWindow's closing event.
-        //SaveRunningApps();
+
+        PollService?.Stop();
+
         base.OnExit(e);
     }
     #endregion
