@@ -13,7 +13,6 @@
     Background="Transparent"
     FontFamily="Aptos"
     Icon="/AppRestorer;component/AppIcon.ico"
-    Loaded="SettingsWindow_Loaded"
     WindowState="Normal"
     WindowStyle="None"
     mc:Ignorable="d">
@@ -106,38 +105,84 @@
                 </TextBlock>
             </StackPanel>
 
+            <ctrl:Spinner
+                Grid.Row="0"
+                Width="60"
+                Height="60"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                DotBrush="{StaticResource ProgressBrushRadial}"
+                DotCount="9"
+                DotSize="12"
+                Mode="AnimatePositions"
+                RotationDuration="1.2"
+                Shape="Dots"
+                SineWave="True"
+                Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}" />
+
+
             <StackPanel
                 Grid.Row="2"
                 Margin="-15,5,-15,0"
                 HorizontalAlignment="Center"
                 Orientation="Horizontal">
                 <DockPanel Margin="10">
-                    <!--  Filter TextBox  -->
+                    <!--#region [Filter TextBox]-->
                     <StackPanel
                         Margin="10,0,0,5"
                         HorizontalAlignment="Stretch"
                         DockPanel.Dock="Top"
-                        Orientation="Horizontal">
-                        <TextBlock
-                            Margin="0,0,5,0"
+                        Orientation="Vertical">
+                        <StackPanel
+                            Margin="10,0,0,5"
+                            HorizontalAlignment="Stretch"
+                            Orientation="Horizontal">
+                            <TextBlock
+                                Margin="0,0,5,0"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                FontSize="16"
+                                Foreground="{StaticResource NormalBrush}"
+                                Text="Filter:" />
+                            <TextBox
+                                MinWidth="200"
+                                MinHeight="24"
+                                VerticalAlignment="Center"
+                                VerticalContentAlignment="Bottom"
+                                Background="Transparent"
+                                FontSize="18"
+                                Foreground="{StaticResource NormalBrush}"
+                                Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <ProgressBar
+                            Width="200"
+                            Height="5"
+                            Margin="55,-4,0,0"
+                            HorizontalAlignment="Left"
                             VerticalAlignment="Center"
                             Background="Transparent"
-                            Foreground="{StaticResource NormalBrush}"
-                            Text="Filter:" />
-                        <TextBox
-                            MinWidth="200"
-                            MinHeight="20"
-                            VerticalAlignment="Center"
-                            VerticalContentAlignment="Center"
-                            Background="Transparent"
-                            Foreground="{StaticResource NormalBrush}"
-                            Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            BorderThickness="0"
+                            Foreground="DodgerBlue"
+                            IsEnabled="True"
+                            IsIndeterminate="True"
+                            Style="{StaticResource SmoothIndeterminateProgressBar}"
+                            Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}" />
+
+                        <!--<ctrl:ProgressBarEx
+                            AnimationWidth="100"
+                            BarColor="DodgerBlue"
+                            BarHeight="16"
+                            BarWidth="30"
+                            Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}"
+                            Duration="00:00:01.1" />-->
                     </StackPanel>
+                    <!--#endregion-->
+
                     <ListBox
                         x:Name="AppList"
                         MinWidth="800"
-                        MinHeight="490"
-                        MaxHeight="490"
+                        MinHeight="480"
+                        MaxHeight="480"
                         Margin="0"
                         Background="Transparent"
                         BorderThickness="0"
@@ -196,6 +241,7 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
                 </DockPanel>
 
             </StackPanel>

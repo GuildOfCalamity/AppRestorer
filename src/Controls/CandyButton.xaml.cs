@@ -195,8 +195,7 @@ namespace AppRestorer.Controls
 
         void CandyButtonIsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            Debug.WriteLine($"[INFO] {nameof(CandyButton)} IsEnabled: {e.NewValue}");
-
+            //Debug.WriteLine($"[INFO] {nameof(CandyButton)} IsEnabled: {e.NewValue}");
             if (ButtonColor != disabledColor) { previousColor = ButtonColor; }
             if (e.NewValue is bool ena && ena == false) { ButtonColor = disabledColor; }
             else { ButtonColor = previousColor; }

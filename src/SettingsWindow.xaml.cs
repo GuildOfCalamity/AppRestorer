@@ -84,7 +84,7 @@ public partial class SettingsWindow : Window
                 Task.Run(async () =>
                 {
                     _vm!.IsBusy = true;
-                    for (int i = 1; i < 21; i++)
+                    for (int i = 1; i < 31; i++)
                     {
                         _vm!.StatusText = $"{tag} step {i}";
                         await Task.Delay(100);
@@ -117,27 +117,5 @@ public partial class SettingsWindow : Window
         }
         else
             Debug.WriteLine($"[EVENTBUS] Received event bus message of type '{e.Payload.GetType()}'");
-    }
-
-    /// <summary>
-    /// We'll handle this in the ViewModel instead.
-    /// </summary>
-    void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
-    {
-       // _vm!.StatusText = $"Reading apps from registry...";
-       // var runner = new TaskRunner(() =>
-       // {
-       //     _apps = _vm!.GetUninstalls();
-       //
-       // }, "Get Uninstalls");
-       // runner.TaskCompleted += (s, e) =>
-       // {
-       //     AppList.Dispatcher.Invoke(() =>
-       //     {
-       //         _vm!.StatusText = $"Task '{e.TaskName}' finished, duration: {e.Duration.ToReadableTime()}.  Total: {_apps?.Count}";
-       //         AppList.ItemsSource = _vm.AppsView; // AppList.ItemsSource = _apps;
-       //     });
-       // };
-       // _ = runner.RunAsync();
     }
 }

@@ -145,3 +145,23 @@ public class MenuItemRoleToVisibilityConverter : IValueConverter
     }
 }
 
+/// <summary>
+/// Turns PulseWidth and PulseDuration into usable offsets and TimeSpans.
+/// </summary>
+public class HalfConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) => (double)value / 2;
+    public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
+}
+public class HalfNegConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) => -(double)value / 2;
+    public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
+}
+public class SecondsToTimeSpanConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) => TimeSpan.FromSeconds((double)value);
+    public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
+}
+
+

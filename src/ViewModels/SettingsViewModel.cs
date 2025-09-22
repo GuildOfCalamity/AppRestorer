@@ -93,6 +93,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         {
             if (_filterText != value)
             {
+                IsBusy = true;
                 _filterText = value;
                 OnPropertyChanged();
                 // Stop/Reset debounce timer
@@ -104,6 +105,7 @@ public class SettingsViewModel : INotifyPropertyChanged
                     {
                         StatusText = $"Filtered by '{_filterText}'";
                         AppsView?.Refresh();
+                        IsBusy = false;
                     });
                 }, null, TimeSpan.FromSeconds(1.1d), Timeout.InfiniteTimeSpan);
             }
@@ -124,6 +126,24 @@ public class SettingsViewModel : INotifyPropertyChanged
         });
 
         StatusText = $"Reading from registry...";
+
+        window.Loaded += Window_Loaded;
+
+        #region [Reflection]
+        PropertyInfo[] props = this.GetType().GetProperties();
+        foreach (PropertyInfo prop in props)
+        {
+            if (prop == null)
+                continue;
+            if (!_modelDependencies.ContainsKey(prop.Name))
+                _modelDependencies.Add(prop.Name, prop.PropertyType.FullName ?? string.Empty);
+        }
+        Debug.WriteLine($"[INFO] Model initialized with {_modelDependencies.Count} dependency properties.");
+        #endregion
+    }
+
+    async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
         var runner = new TaskRunner(() =>
         {
             Apps = new ObservableCollection<InstalledApp>(GetUninstalls());
@@ -137,19 +157,7 @@ public class SettingsViewModel : INotifyPropertyChanged
                 AppsView.Filter = FilterApps;
             });
         };
-        _ = runner.RunAsync();
-
-        #region [Reflection]
-        PropertyInfo[] props = this.GetType().GetProperties();
-        foreach (PropertyInfo prop in props)
-        {
-            if (prop == null)
-                continue;
-            if (!_modelDependencies.ContainsKey(prop.Name))
-                _modelDependencies.Add(prop.Name, prop.PropertyType.FullName ?? string.Empty);
-        }
-        Debug.WriteLine($"[INFO] Model initialized with {_modelDependencies.Count} dependency properties.");
-        #endregion
+        await runner.RunAsync();
     }
 
     bool FilterApps(object obj)

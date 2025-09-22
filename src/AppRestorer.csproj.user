@@ -11,6 +11,12 @@
     <Compile Update="Controls\ColorPreview.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Controls\ProgressBarEx.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Controls\Spinner.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="MessageBoxWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>

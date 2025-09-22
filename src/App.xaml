@@ -30,6 +30,9 @@
             <local:BoolToReverseConverter x:Key="boolToReverse" />
             <local:BoolToImageConverter x:Key="boolToImage" />
             <local:PathToImageConverter x:Key="pathToImage" />
+            <local:HalfConverter x:Key="halfConverter" />
+            <local:HalfNegConverter x:Key="halfNegConverter" />
+            <local:SecondsToTimeSpanConverter x:Key="secondsToTimeSpanConverter" />
             <local:MenuItemRoleToVisibilityConverter x:Key="MenuItemRoleToVisibilityConverter" />
             <!--#endregion-->
 
@@ -73,6 +76,23 @@
             <Color x:Key="DisabledBorderLightColor">#FFAAAAAA</Color>
             <Color x:Key="DisabledBorderDarkColor">#FF888888</Color>
             <Color x:Key="DefaultBorderBrushDarkColor">Black</Color>
+            <RadialGradientBrush x:Key="ProgressBrushRadial" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.5" Color="DodgerBlue" />
+                    <GradientStop Offset="1.0" Color="Black" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <LinearGradientBrush x:Key="ProgressBrushLinear" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#F5F5F5" />
+                        <GradientStop Offset="0.5" Color="DodgerBlue" />
+                        <GradientStop Offset="0.8" Color="#202020" />
+                        <GradientStop Offset="1.0" Color="Black" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
             <LinearGradientBrush x:Key="SettingsBrush" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
@@ -1128,6 +1148,77 @@
                 </Setter>
             </Style>
             <!--#endregion-->
+
+            <Style x:Key="SmoothIndeterminateProgressBar" TargetType="ProgressBar">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid ClipToBounds="True">
+                                <!--  Background  -->
+                                <Border
+                                    Height="{TemplateBinding Height}"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="3" />
+                                <!--  Animated Fill  -->
+                                <Border Height="{TemplateBinding Height}" CornerRadius="4">
+                                    <Border.Background>
+                                        <LinearGradientBrush MappingMode="RelativeToBoundingBox" StartPoint="0,0" EndPoint="1,0">
+                                            <!--  Transparent => Opaque => Transparent  -->
+                                            <GradientStop x:Name="GS1" Offset="0" Color="Transparent" />
+                                            <GradientStop x:Name="GS2" Offset="0.4" Color="DodgerBlue" />
+                                            <GradientStop x:Name="GS3" Offset="0.6" Color="DeepSkyBlue" />
+                                            <GradientStop x:Name="GS4" Offset="1" Color="Transparent" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsIndeterminate" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <!--  Animate all stops together to slide the gradient  -->
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="GS1"
+                                                    Storyboard.TargetProperty="Offset"
+                                                    From="-1"
+                                                    To="1"
+                                                    Duration="0:0:2" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="GS2"
+                                                    Storyboard.TargetProperty="Offset"
+                                                    From="-0.8"
+                                                    To="1.4"
+                                                    Duration="0:0:2" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="GS3"
+                                                    Storyboard.TargetProperty="Offset"
+                                                    From="-0.2"
+                                                    To="1.8"
+                                                    Duration="0:0:2" />
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="GS4"
+                                                    Storyboard.TargetProperty="Offset"
+                                                    From="0.2"
+                                                    To="2"
+                                                    Duration="0:0:2" />
+                                                <!--#region [Original Offsets]-->
+                                                <!--
+                                                <DoubleAnimation Storyboard.TargetName="GS1" Storyboard.TargetProperty="Offset" From="-1" To="1" Duration="0:0:2" />
+                                                <DoubleAnimation Storyboard.TargetName="GS2" Storyboard.TargetProperty="Offset" From="-0.8" To="1.2" Duration="0:0:2" />
+                                                <DoubleAnimation Storyboard.TargetName="GS3" Storyboard.TargetProperty="Offset" From="-0.2" To="1.8" Duration="0:0:2" />
+                                                <DoubleAnimation Storyboard.TargetName="GS4" Storyboard.TargetProperty="Offset" From="0" To="2" Duration="0:0:2" />
+                                                -->
+                                                <!--#endregion-->
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
         </ResourceDictionary>
     </Application.Resources>
