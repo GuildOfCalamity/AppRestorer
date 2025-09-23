@@ -111,6 +111,20 @@ public class SettingsViewModel : INotifyPropertyChanged
             }
         }
     }
+
+    bool _isAnimated = false;
+    public bool IsAnimated
+    {
+        get => _isAnimated;
+        set
+        {
+            if (_isAnimated != value)
+            {
+                _isAnimated = value;
+                OnPropertyChanged();
+            }
+        }
+    }
     #endregion
 
     public ICommand MenuCommand { get; set; }
@@ -118,6 +132,8 @@ public class SettingsViewModel : INotifyPropertyChanged
     public SettingsViewModel(Window window)
     {
         _window = window;
+
+        IsAnimated = ConfigManager.Get("IsAnimated", defaultValue: true);
 
         MenuCommand = new RelayCommand(() => 
         { 

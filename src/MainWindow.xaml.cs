@@ -299,6 +299,7 @@ public partial class MainWindow : Window
         if (_dialogWatcher)
             _closer?.Cancel();
         ConfigManager.Set("DialogWatcher", value: _dialogWatcher);
+        ConfigManager.Set("IsAnimated", value: _vm!.IsAnimated);
         ConfigManager.Set("RunOnStartup", value: _runOnStartup);
         ConfigManager.Set("FirstRun", value: false);
         ConfigManager.Set("PollIntervalInMinutes", value: _interval);

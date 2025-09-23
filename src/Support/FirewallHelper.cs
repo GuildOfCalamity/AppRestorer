@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace AppRestorer;
 
 /// <summary>
-/// May need to add admin priviledges to the app's manifest:
+/// May need to add admin privileges to the app's manifest:
 /// <code>
 ///   <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
 /// </code>
@@ -34,7 +34,7 @@ public static class FirewallHelper
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to add firewall rule: {ex.Message}");
+            Debug.WriteLine($"[WARNING] Failed to add firewall rule: {ex.Message}");
         }
     }
 
@@ -56,7 +56,7 @@ public static class FirewallHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to add outbound rule: {ex.Message}");
+            Debug.WriteLine($"[WARNING] Failed to add outbound rule: {ex.Message}");
         }
     }
 
@@ -76,7 +76,7 @@ public static class FirewallHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to remove rule: {ex.Message}");
+            Debug.WriteLine($"[WARNING] Failed to remove rule: {ex.Message}");
         }
     }
 
@@ -106,7 +106,7 @@ public static class FirewallHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to add outbound rule: {ex.Message}");
+            Debug.WriteLine($"[WARNING] Failed to add outbound rule: {ex.Message}");
         }
     }
 
@@ -128,7 +128,7 @@ public static class FirewallHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to add inbound rule: {ex.Message}");
+            Debug.WriteLine($"[WARNING] Failed to add inbound rule: {ex.Message}");
         }
     }
 

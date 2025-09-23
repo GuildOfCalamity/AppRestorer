@@ -83,6 +83,13 @@
                     <GradientStop Offset="1.0" Color="Black" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
+            <RadialGradientBrush x:Key="SnowBrushRadial" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.6" Color="#C0C0C0" />
+                    <GradientStop Offset="1.0" Color="#303030" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
             <LinearGradientBrush x:Key="ProgressBrushLinear" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
@@ -186,8 +193,8 @@
             <LinearGradientBrush x:Key="NormalBorderBrush" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
-                        <GradientStop Offset="0.0" Color="#CCC" />
-                        <GradientStop Offset="1.0" Color="#444" />
+                        <GradientStop Offset="0.0" Color="#DDD" />
+                        <GradientStop Offset="1.0" Color="#666" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>

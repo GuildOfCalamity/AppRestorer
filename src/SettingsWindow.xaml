@@ -38,9 +38,27 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
+
+            <ctrl:Spinner
+                Grid.Row="0"
+                Width="830"
+                Height="80"
+                Margin="-1,0,0,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="20"
+                DotSize="12"
+                Mode="AnimatePositions"
+                Shape="Wind"
+                Visibility="{Binding IsAnimated, Mode=OneWay, Converter={StaticResource boolToVisibility}}"
+                WaveAmplitude="12"
+                WaveDuration="1.1"
+                WindAmplitude="1"
+                WindFrequency="0.1" />
+
             <StackPanel
                 Grid.Row="0"
                 Margin="0,10,0,0"
@@ -85,44 +103,6 @@
 
             <StackPanel
                 Grid.Row="1"
-                Margin="10,2"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Bottom"
-                Orientation="Vertical">
-                <TextBlock
-                    Background="Transparent"
-                    FontSize="16"
-                    Foreground="{StaticResource SettingsBrush}"
-                    Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
-                    <TextBlock.Effect>
-                        <DropShadowEffect
-                            BlurRadius="3"
-                            Direction="310"
-                            Opacity="0.8"
-                            ShadowDepth="1"
-                            Color="#000000" />
-                    </TextBlock.Effect>
-                </TextBlock>
-            </StackPanel>
-
-            <ctrl:Spinner
-                Grid.Row="0"
-                Width="60"
-                Height="60"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                DotBrush="{StaticResource ProgressBrushRadial}"
-                DotCount="9"
-                DotSize="12"
-                Mode="AnimatePositions"
-                RotationDuration="1.2"
-                Shape="Dots"
-                SineWave="True"
-                Visibility="{Binding IsBusy, Mode=OneWay, Converter={StaticResource boolToVisibility}}" />
-
-
-            <StackPanel
-                Grid.Row="2"
                 Margin="-15,5,-15,0"
                 HorizontalAlignment="Center"
                 Orientation="Horizontal">
@@ -150,14 +130,32 @@
                                 VerticalAlignment="Center"
                                 VerticalContentAlignment="Bottom"
                                 Background="Transparent"
+                                BorderBrush="{StaticResource NormalBorderBrush}"
                                 FontSize="18"
                                 Foreground="{StaticResource NormalBrush}"
                                 Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock
+                                MinWidth="300"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                FontSize="16"
+                                Foreground="{StaticResource SettingsBrush}"
+                                Text="{Binding StatusText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect
+                                        BlurRadius="3"
+                                        Direction="310"
+                                        Opacity="0.8"
+                                        ShadowDepth="1"
+                                        Color="#000000" />
+                                </TextBlock.Effect>
+                            </TextBlock>
                         </StackPanel>
                         <ProgressBar
                             Width="200"
-                            Height="5"
-                            Margin="55,-4,0,0"
+                            Height="4"
+                            Margin="55,-12,0,0"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Center"
                             Background="Transparent"

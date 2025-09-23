@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 namespace AppRestorer;
 
 /// <summary>
-/// May need to add admin priviledges to the app's manifest:
+/// May need to add admin privileges to the app's manifest:
 /// <code>
 ///   <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
 /// </code>
@@ -30,7 +31,7 @@ public static class RestorePointHelper
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Restore point creation failed: {ex.Message}");
+            Debug.WriteLine($"[WARNING] Restore point creation failed: {ex.Message}");
             return false;
         }
     }
@@ -47,7 +48,7 @@ public static class RestorePointHelper
 public static class InteropRestorePoint
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct RESTOREPOINTINFO
+    struct RESTOREPOINTINFO
     {
         public int dwEventType;       // 100 = BEGIN_SYSTEM_CHANGE
         public int dwRestorePtType;   // 0 = APPLICATION_INSTALL
@@ -57,7 +58,7 @@ public static class InteropRestorePoint
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct STATEMGRSTATUS
+    struct STATEMGRSTATUS
     {
         public int nStatus;
         public long llSequenceNumber;

@@ -56,6 +56,24 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
+            <ctrl:Spinner
+                Grid.Row="0"
+                Width="920"
+                Height="24"
+                Margin="-10,-22,-12,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="20"
+                DotSize="10"
+                Mode="AnimatePositions"
+                Shape="Wind"
+                Visibility="{Binding IsAnimated, Mode=OneWay, Converter={StaticResource boolToVisibility}}"
+                WaveAmplitude="12"
+                WaveDuration="1.1"
+                WindAmplitude="1"
+                WindFrequency="0.1" />
+
             <!--#region [TitleBar]-->
             <Border
                 x:Name="titleBar"
@@ -142,6 +160,7 @@
                         -->
                     </ContextMenu>
                 </Border.ContextMenu>
+
                 <StackPanel
                     VerticalAlignment="Stretch"
                     Orientation="Horizontal"
@@ -190,6 +209,7 @@
                         Template="{StaticResource ReformedButton}"
                         ToolTipService.ToolTip="close" />
                 </StackPanel>
+
             </Border>
             <!--#endregion-->
 

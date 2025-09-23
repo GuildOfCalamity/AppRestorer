@@ -111,6 +111,20 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    bool _isAnimated = false;
+    public bool IsAnimated
+    {
+        get => _isAnimated;
+        set
+        {
+            if (_isAnimated != value)
+            {
+                _isAnimated = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     System.Windows.Media.SolidColorBrush? _binderBrush1;
     public System.Windows.Media.SolidColorBrush? BinderBrush1
     {
@@ -155,6 +169,8 @@ public class MainViewModel : INotifyPropertyChanged
         _window = window;
 
         CurrentCulture = System.Threading.Thread.CurrentThread.CurrentUICulture;
+
+        IsAnimated = ConfigManager.Get("IsAnimated", defaultValue: true);
 
         CloseCommand = new RelayCommand(() => _window.Close());
         MinimizeCommand = new RelayCommand(() => _window.WindowState = WindowState.Minimized);
