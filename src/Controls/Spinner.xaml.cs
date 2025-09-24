@@ -1,52 +1,62 @@
 ﻿using System;
-using System.Reflection.Metadata;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Automation.Provider;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
-using static System.Formats.Asn1.AsnWriter;
-
 
 namespace AppRestorer.Controls;
 
-public enum RenderMode
+/**
+ **   🛠️🛠️ THE ULTIMATE REUSABLE SPINNER CONTROL 🛠️🛠️
+ **
+ **           Copyright © The Guild 2024-2025
+ **/
+
+public enum SpinnerRenderMode
 {
-    RotateCanvas,    // if using single color with dot circle
-    AnimatePositions // if using gradient brush and versatile animation shape
+    RotateCanvas,    // if using single color with dot circle (simpler mode, but less versatile)
+    AnimatePositions // if using gradient brush and versatile animations/shapes
 }
 
-public enum RenderShape
+public enum SpinnerRenderShape
 {
-    Dots,  // for standard spinner
-    Polys, // for spinner with more complex shapes
-    Snow,  // for raining animation
-    Wind,  // for horizontal animation
-    Wave,  // for sine wave animation
-    Space, // for starfield animation
-    Line,  // for line warp animation
-    Test   // RFU
+    Dots,   // for standard/classic spinner
+    Polys,  // for spinner with more complex shapes
+    Snow,   // for raining/snowing animation
+    Wind,   // for horizontal animation
+    Wave,   // for sine wave animation
+    Space,  // for starfield animation
+    Line,   // for line warp animation
+    Stripe, // for exaggerated line animation
+    Bounce, // for dot bouncing animation
 }
 
 /// <summary>
-/// If mode is set to <see cref="RenderMode.RotateCanvas"/> then some of<br/>
+/// If mode is set to <see cref="SpinnerRenderMode.RotateCanvas"/> then some of<br/>
 /// the more advanced animations will not render correctly, it's<br/>
-/// recommended to keep the mode set to <see cref="RenderMode.AnimatePositions"/><br/>
+/// recommended to keep the mode set to <see cref="SpinnerRenderMode.AnimatePositions"/><br/>
 /// which employs the <see cref="CompositionTarget.Rendering"/> surface event.<br/>
+/// Visibility determines if animation runs.
 /// </summary>
 /// <remarks>
-/// Visibility determines if animation runs.
+/// Most render methods have their own data elements, however some are shared,<br/>
+/// e.g. the Snow/Wind/Space modes all use the _rain arrays.<br/>
 /// </remarks>
 public partial class Spinner : UserControl
 {
+    bool hasAppliedTemplate = false;
+    bool _renderHooked = false;
+    double _angle = 0d;
     const double Tau = 2 * Math.PI;
+    const double Epsilon = 0.000000000001;
+
     public int DotCount { get; set; } = 10;
     public double DotSize { get; set; } = 8;
     public Brush DotBrush { get; set; } = Brushes.DodgerBlue;
-    public RenderMode Mode { get; set; } = RenderMode.AnimatePositions; // more versatile
-    public RenderShape Shape { get; set; } = RenderShape.Wave;
+    public SpinnerRenderMode RenderMode { get; set; } = SpinnerRenderMode.AnimatePositions; // more versatile
+    public SpinnerRenderShape RenderShape { get; set; } = SpinnerRenderShape.Wave;
 
     public Spinner()
     {
@@ -55,24 +65,46 @@ public partial class Spinner : UserControl
         IsVisibleChanged += Spinner_IsVisibleChanged;
     }
 
+    #region [Overrides]
+    public override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+        hasAppliedTemplate = true;
+        Debug.WriteLine($"[INFO] {nameof(Spinner)} template has been applied.");
+    }
+
+    protected override Size MeasureOverride(Size constraint)
+    {
+        // The width/height is used in render object calculations, so we must have some value.
+        if (constraint.Width <= 0) { Width = 50; }
+        if (constraint.Height <= 0) { Height = 50; }
+
+        Debug.WriteLine($"[INFO] {nameof(Spinner)} is measured to be {constraint}");
+        return base.MeasureOverride(constraint);
+    }
+    #endregion
+
+    #region [Events]
     void Spinner_Loaded(object sender, RoutedEventArgs e)
     {
-        if (Shape == RenderShape.Dots || Shape == RenderShape.Wave)
+        if (RenderShape == SpinnerRenderShape.Dots || RenderShape == SpinnerRenderShape.Wave)
             CreateDots();
-        else if (Shape == RenderShape.Polys)
+        else if (RenderShape == SpinnerRenderShape.Polys)
             CreatePolys();
-        else if (Shape == RenderShape.Snow || Shape == RenderShape.Wind || Shape == RenderShape.Space)
+        else if (RenderShape == SpinnerRenderShape.Snow || RenderShape == SpinnerRenderShape.Wind || RenderShape == SpinnerRenderShape.Space)
             CreateSnow();
-        else if (Shape == RenderShape.Line)
+        else if (RenderShape == SpinnerRenderShape.Line)
             CreateLines();
-        else if (Shape == RenderShape.Test)
-            CreateTest();
+        else if (RenderShape == SpinnerRenderShape.Stripe)
+            CreateStripe();
+        else if (RenderShape == SpinnerRenderShape.Bounce)
+            CreateBounce();
         else
             CreateDots();
 
         if (IsVisible)
         {
-            if (Mode == RenderMode.RotateCanvas)
+            if (RenderMode == SpinnerRenderMode.RotateCanvas)
                 StartAnimationStandard();
             else
                 StartAnimationCompositionTarget();
@@ -84,19 +116,20 @@ public partial class Spinner : UserControl
         RunFade(IsVisible);
         if (IsVisible)
         {
-            if (Mode == RenderMode.RotateCanvas)
+            if (RenderMode == SpinnerRenderMode.RotateCanvas)
                 StartAnimationStandard();
             else
                 StartAnimationCompositionTarget();
         }
         else
         {
-            if (Mode == RenderMode.RotateCanvas)
+            if (RenderMode == SpinnerRenderMode.RotateCanvas)
                 StopAnimationStandard();
             else
                 StopAnimationCompositionTarget();
         }
     }
+    #endregion
 
     void StartAnimationStandard()
     {
@@ -119,6 +152,50 @@ public partial class Spinner : UserControl
         PART_Canvas.RenderTransform?.BeginAnimation(RotateTransform.AngleProperty, null);
     }
 
+    void StartAnimationCompositionTarget()
+    {
+        if (_renderHooked) { return; }
+        _renderHooked = true;
+        if (RenderShape == SpinnerRenderShape.Wave)
+            CompositionTarget.Rendering += OnSineWaveRendering; // OnSpiralInOutRendering;
+        else if (RenderShape == SpinnerRenderShape.Snow)
+            CompositionTarget.Rendering += OnSnowRendering;
+        else if (RenderShape == SpinnerRenderShape.Wind)
+            CompositionTarget.Rendering += OnWindRendering;
+        else if (RenderShape == SpinnerRenderShape.Space)
+            CompositionTarget.Rendering += OnStarfieldRendering;
+        else if (RenderShape == SpinnerRenderShape.Line)
+            CompositionTarget.Rendering += OnLineRendering;
+        else if (RenderShape == SpinnerRenderShape.Stripe)
+            CompositionTarget.Rendering += OnStripeRendering;
+        else if (RenderShape == SpinnerRenderShape.Bounce)
+            CompositionTarget.Rendering += OnBounceRendering;
+        else
+            CompositionTarget.Rendering += OnCircleRendering;
+    }
+
+    void StopAnimationCompositionTarget()
+    {
+        if (!_renderHooked) { return; }
+        _renderHooked = false;
+        if (RenderShape == SpinnerRenderShape.Wave)
+            CompositionTarget.Rendering -= OnSineWaveRendering; // OnSpiralInOutRendering;
+        else if (RenderShape == SpinnerRenderShape.Snow)
+            CompositionTarget.Rendering -= OnSnowRendering;
+        else if (RenderShape == SpinnerRenderShape.Wind)
+            CompositionTarget.Rendering -= OnWindRendering;
+        else if (RenderShape == SpinnerRenderShape.Space)
+            CompositionTarget.Rendering -= OnStarfieldRendering;
+        else if (RenderShape == SpinnerRenderShape.Line)
+            CompositionTarget.Rendering -= OnLineRendering;
+        else if (RenderShape == SpinnerRenderShape.Stripe)
+            CompositionTarget.Rendering -= OnStripeRendering;
+        else if (RenderShape == SpinnerRenderShape.Bounce)
+            CompositionTarget.Rendering -= OnBounceRendering;
+        else
+            CompositionTarget.Rendering -= OnCircleRendering;
+    }
+
     /// <summary>
     /// If <paramref name="fadeIn"/> is <c>true</c>, the <see cref="UserControl"/> will be animated to 1 opacity.<br/>
     /// If <paramref name="fadeIn"/> is <c>false</c>, the <see cref="UserControl"/> will be animated to 0 opacity.<br/>
@@ -135,51 +212,7 @@ public partial class Spinner : UserControl
         this.BeginAnimation(OpacityProperty, anim);
     }
 
-
     #region [Composition Rendering]
-
-    double _angle = 0d;
-    bool _renderHooked = false;
-
-    void StartAnimationCompositionTarget()
-    {
-        if (_renderHooked) { return; }
-        _renderHooked = true;
-        if (Shape == RenderShape.Wave)
-            CompositionTarget.Rendering += OnSineWaveRendering; // OnSpiralInOutRendering;
-        else if (Shape == RenderShape.Snow)
-            CompositionTarget.Rendering += OnSnowRendering;
-        else if (Shape == RenderShape.Wind)
-            CompositionTarget.Rendering += OnWindRendering;
-        else if (Shape == RenderShape.Space)
-            CompositionTarget.Rendering += OnStarfieldRendering;
-        else if (Shape == RenderShape.Line)
-            CompositionTarget.Rendering += OnLineRendering;
-        else if (Shape == RenderShape.Test)
-            CompositionTarget.Rendering += OnTestRendering;
-        else
-            CompositionTarget.Rendering += OnCircleRendering;
-    }
-
-    void StopAnimationCompositionTarget()
-    {
-        if (!_renderHooked) { return; }
-        _renderHooked = false;
-        if (Shape == RenderShape.Wave)
-            CompositionTarget.Rendering -= OnSineWaveRendering; // OnSpiralInOutRendering;
-        else if (Shape == RenderShape.Snow)
-            CompositionTarget.Rendering -= OnSnowRendering;
-        else if (Shape == RenderShape.Wind)
-            CompositionTarget.Rendering -= OnWindRendering;
-        else if (Shape == RenderShape.Space)
-            CompositionTarget.Rendering -= OnStarfieldRendering;
-        else if (Shape == RenderShape.Line)
-            CompositionTarget.Rendering -= OnLineRendering;
-        else if (Shape == RenderShape.Test)
-            CompositionTarget.Rendering -= OnTestRendering;
-        else
-            CompositionTarget.Rendering -= OnCircleRendering;
-    }
 
     void CreateDots(bool pulse = false)
     {
@@ -406,6 +439,9 @@ public partial class Spinner : UserControl
     public double WindFrequency { get; set; } = 0.6; // cycles/sec
     public double WindBias { get; set; } = 2;        // constant drift px/sec
 
+    public bool SnowSizeRandom { get; set; } = true;
+    public double SnowBaseSpeed { get; set; } = 50;
+
     double[] _rainX;
     double[] _rainY;
     double[] _rainSpeed;
@@ -424,24 +460,25 @@ public partial class Spinner : UserControl
         _rainY = new double[DotCount];
         _rainSpeed = new double[DotCount];
         _rainPhase = new double[DotCount];
-        _rainSize = new double[DotCount]; // for starfield only
+        _rainSize = new double[DotCount];
 
         PART_Canvas.Children.Clear();
 
         for (int i = 0; i < DotCount; i++)
         {
             _rainX[i] = Random.Shared.NextDouble() * (ActualWidth - DotSize);
-            _rainY[i] = Random.Shared.NextDouble() * ActualHeight;    // start at random vertical position
-            _rainSpeed[i] = 50 + Random.Shared.NextDouble() * 100;    // px/sec
-            _rainPhase[i] = Random.Shared.NextDouble() * Tau;         // random sway/drift start
-            _rainSize[i] = 1 + Random.Shared.NextDouble() * (DotSize / 2);
+            _rainY[i] = Random.Shared.NextDouble() * ActualHeight;            // start at random vertical position
+            _rainSpeed[i] = SnowBaseSpeed + Random.Shared.NextDouble() * 50;  // px/sec
+            _rainPhase[i] = Random.Shared.NextDouble() * Tau;                 // random sway/drift start
+            _rainSize[i] = SnowSizeRandom ? 1 + Random.Shared.NextDouble() * DotSize : DotSize;
 
             var dot = new Ellipse
             {
-                Width = DotSize,
-                Height = DotSize,
+                Width = _rainSize[i],
+                Height = _rainSize[i],
                 Fill = DotBrush,
-                Opacity = (double)i / DotCount // fade each consecutive dot
+                Opacity = Random.Shared.NextDouble() + 0.09, // random opacity
+                //Opacity = (double)i / DotCount, // ⇦ use this to fade each consecutive dot
             };
 
             Canvas.SetLeft(dot, _rainX[i]);
@@ -449,6 +486,7 @@ public partial class Spinner : UserControl
             PART_Canvas.Children.Add(dot);
         }
     }
+
 
     void OnSnowRendering(object? sender, EventArgs e)
     {
@@ -466,9 +504,8 @@ public partial class Spinner : UserControl
                 // Re-spawn at top
                 _rainY[i] = -DotSize;
                 _rainX[i] = Random.Shared.NextDouble() * (ActualWidth - DotSize);
-                _rainSpeed[i] = 50 + Random.Shared.NextDouble() * 100;
+                _rainSpeed[i] = SnowBaseSpeed + Random.Shared.NextDouble() * 50;
                 _rainPhase[i] = Random.Shared.NextDouble() * Tau;
-
             }
 
             // Advance sway phase
@@ -478,15 +515,8 @@ public partial class Spinner : UserControl
             double sway = Math.Sin(_rainPhase[i]) * WindAmplitude;
             double x = _rainX[i] + sway + WindBias * (_rainY[i] / ActualHeight);
 
-            //var dot = (UIElement)PART_Canvas.Children[i];
-            var dot = (Ellipse)PART_Canvas.Children[i]; // assumes the Canvas contains Ellipse elements
-
-            if (!_fixedSnowSize)
-            {
-                // Mix up the particle size
-                dot.Width = _rainSize[i] * 2;
-                dot.Height = _rainSize[i] * 2;
-            }
+            //var dot = (Ellipse)PART_Canvas.Children[i]; // assumes the Canvas contains Ellipse elements
+            var dot = (UIElement)PART_Canvas.Children[i];
 
             //Canvas.SetLeft(dot, _rainX[i]); // ⇦ use this if you want no sway/drift
             Canvas.SetLeft(dot, x); // place the sway/drift + bias
@@ -510,7 +540,7 @@ public partial class Spinner : UserControl
                 // Re-spawn at side
                 _rainY[i] = Random.Shared.NextDouble() * (ActualHeight - DotSize);
                 _rainX[i] = -DotSize;
-                _rainSpeed[i] = 50 + Random.Shared.NextDouble() * 100;
+                _rainSpeed[i] = SnowBaseSpeed + Random.Shared.NextDouble() * 50;
                 _rainPhase[i] = Random.Shared.NextDouble() * Tau;
 
             }
@@ -522,16 +552,8 @@ public partial class Spinner : UserControl
             double sway = Math.Sin(_rainPhase[i]) * WindAmplitude;
             double x = _rainY[i] + sway + WindBias * (_rainX[i] / ActualWidth);
 
-
-            //var dot = (UIElement)PART_Canvas.Children[i];
-            var dot = (Ellipse)PART_Canvas.Children[i]; // assumes the Canvas contains Ellipse elements
-
-            if (!_fixedSnowSize)
-            {
-                // Mix up the particle size
-                dot.Width = _rainSize[i] * 2;
-                dot.Height = _rainSize[i] * 2;
-            }
+            //var dot = (Ellipse)PART_Canvas.Children[i]; // assumes the Canvas contains Ellipse elements
+            var dot = (UIElement)PART_Canvas.Children[i];
 
             Canvas.SetLeft(dot, _rainX[i]);
             //Canvas.SetTop(dot, _rainY[i]); // ⇦ use this if you want no sway/drift
@@ -582,11 +604,12 @@ public partial class Spinner : UserControl
                 double angle = Random.Shared.NextDouble() * Tau;
                 _rainX[i] = centerX + Math.Cos(angle) * 2; // small offset so they don't overlap exactly
                 _rainY[i] = centerY + Math.Sin(angle) * 2;
-                _rainSpeed[i] = 50 + Random.Shared.NextDouble() * 150;
-                _rainSize[i] = 1 + Random.Shared.NextDouble() * (DotSize / 2);
+                _rainSpeed[i] = SnowBaseSpeed + Random.Shared.NextDouble() * 100;
+                _rainSize[i] = 1 + Random.Shared.NextDouble() * DotSize;
             }
         }
     }
+
 
     double[] _starX;
     double[] _starY;
@@ -638,6 +661,7 @@ public partial class Spinner : UserControl
         }
     }
 
+    public double LineBaseSpeed { get; set; } = 50;
     void OnLineRendering(object? sender, EventArgs e)
     {
         if (_starX == null || _starY == null) { return; }
@@ -680,7 +704,7 @@ public partial class Spinner : UserControl
                 _starY[i] = centerY;
                 _starDirX[i] = Math.Cos(angle);
                 _starDirY[i] = Math.Sin(angle);
-                _starSpeed[i] = 30 + Random.Shared.NextDouble() * 50;
+                _starSpeed[i] = LineBaseSpeed + Random.Shared.NextDouble() * 50;
                 _starSize[i] = 1 + Random.Shared.NextDouble() * DotSize;
                 streak.StrokeThickness = _starSize[i]/4;
             }
@@ -688,9 +712,9 @@ public partial class Spinner : UserControl
     }
 
     /// <summary>
-    /// Creates an array of dots to apply wind/gravity pressure on.
+    /// Creates an array of lines to apply horizontal movement on.
     /// </summary>
-    void CreateTest()
+    void CreateStripe()
     {
         if (PART_Canvas == null)
             return;
@@ -710,34 +734,36 @@ public partial class Spinner : UserControl
         for (int i = 0; i < DotCount; i++)
         {
             double angle = Random.Shared.NextDouble() * Tau;
-            //_starX[i] = centerX; _starY[i] = centerY;
             _starX[i] = Random.Shared.NextDouble() * (ActualWidth - DotSize);
-            _starY[i] = Random.Shared.NextDouble() * ActualHeight;    // start at random vertical position
+            _starY[i] = Random.Shared.NextDouble() * (ActualHeight - DotSize);  // start at random vertical position
 
-            _starDirX[i] = Math.Cos(angle);
-            _starDirY[i] = Math.Sin(angle);
-            _starSpeed[i] = 30 + Random.Shared.NextDouble() * 50;
-            _starSize[i] = 10 + Random.Shared.NextDouble() * DotSize;
+            _starDirX[i] = Math.Cos(angle); // not needed
+            _starDirY[i] = Math.Sin(angle); // not needed
+            _starSpeed[i] = StripeBaseSpeed + Random.Shared.NextDouble() * 100;
+            _starSize[i] = 1 + Random.Shared.NextDouble() * DotSize;
 
             var streak = new Line
             {
                 Stroke = DotBrush,
-                X1 = _starX[i], X2 = _starX[i]* 1.111, 
-                Y1 = _starX[i]/ DotSize, Y2 = _starX[i]/ DotSize,
-                //Width = _starSize[i] * 12,
-                //Height = DotSize / 2,
-                Fill = new SolidColorBrush(Colors.SpringGreen),
-                StrokeThickness = _starSize[i]/2,
-                StrokeStartLineCap = PenLineCap.Square,
-                StrokeEndLineCap = PenLineCap.Square,
-                Opacity = (double)i / DotCount // fade each consecutive
+                X1 = _starX[i] * -0.05, // start outside left-most
+                X2 = _starX[i] * 0.05,  // end outside right-most
+                Y1 = _starY[i] / (DotSize), 
+                Y2 = _starY[i] / (DotSize),
+                StrokeThickness = _starSize[i] / 2.5,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Opacity = StripeLowOpacity ? RandomLowOpacity() : Random.Shared.NextDouble() + 0.09,
+                //Fill = new SolidColorBrush(Colors.SpringGreen),
             };
 
             PART_Canvas.Children.Add(streak);
         }
     }
 
-    void OnTestRendering(object? sender, EventArgs e)
+    public double StripeBaseSpeed { get; set; } = 50;
+    public bool StripeLowOpacity { get; set; } = false; // for subtle backgrounds
+
+    void OnStripeRendering(object? sender, EventArgs e)
     {
         if (_starX == null || _starY == null) { return; }
 
@@ -745,31 +771,243 @@ public partial class Spinner : UserControl
 
         for (int i = 0; i < DotCount; i++)
         {
-            // move right
+            // move from left to right
             _starX[i] += _starSpeed[i] * dt;
 
-            if (_starX[i] > ActualWidth)
+            if (_starX[i] > (ActualWidth + 2))
             {
                 // Re-spawn at side
                 _starY[i] = Random.Shared.NextDouble() * (ActualHeight - DotSize);
                 _starX[i] = -DotSize;
-                _starSpeed[i] = 50 + Random.Shared.NextDouble() * 100;
+                _starSpeed[i] = StripeBaseSpeed + Random.Shared.NextDouble() * 100;
             }
 
-            //var dot = (UIElement)PART_Canvas.Children[i];
-            var line = (Line)PART_Canvas.Children[i]; // assumes the Canvas contains Line elements
-
-            //if (!_fixedSnowSize)
-            //{
-            //    // Mix up the particle size
-            //    line.Width = _starSize[i] * 10;
-            //    line.Height = _starSize[i] * 2;
-            //}
-
+            var line = (UIElement)PART_Canvas.Children[i];
             Canvas.SetLeft(line, _starX[i]);
             Canvas.SetTop(line, _starY[i]);
         }
     }
+
+    double[] _dotX;
+    double[] _dotY;
+    double[] _dotVX;
+    double[] _dotVY;
+    double[] _dotSize;
+    /// <summary>
+    /// Creates an array of dots to apply wind/gravity pressure on.
+    /// </summary>
+    void CreateBounce()
+    {
+        if (PART_Canvas == null)
+            return;
+
+        _dotX = new double[DotCount];
+        _dotY = new double[DotCount];
+        _dotVX = new double[DotCount];
+        _dotVY = new double[DotCount];
+        _dotSize = new double[DotCount];
+
+        PART_Canvas.Children.Clear();
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            _dotX[i] = Random.Shared.NextDouble() * (ActualWidth - DotSize);
+            _dotY[i] = Random.Shared.NextDouble() * (ActualHeight - DotSize);
+            if (BounceSizeRandom)
+                _dotSize[i] = 2 + Random.Shared.NextDouble() * DotSize;
+            else
+                _dotSize[i] = DotSize;
+
+            // Random velocity between -BounceSpeed and +BounceSpeed px/sec
+            _dotVX[i] = RandomSwing(BounceSpeed); // (Random.Shared.NextDouble() * 200 - 100);
+            _dotVY[i] = RandomSwing(BounceSpeed); // (Random.Shared.NextDouble() * 200 - 100);
+
+            var dot = new Ellipse
+            {
+                Width = _dotSize[i],
+                Height = _dotSize[i],
+                Fill = DotBrush,
+                Opacity = Random.Shared.NextDouble() + 0.09,
+            };
+
+            Canvas.SetLeft(dot, _dotX[i]);
+            Canvas.SetTop(dot, _dotY[i]);
+            PART_Canvas.Children.Add(dot);
+        }
+    }
+
+    public bool BounceSizeRandom { get; set; } = false;
+    public bool BounceCollisions { get; set; } = true;
+    public double BounceSpeed { get; set; } = 80;
+    void OnBounceRendering(object? sender, EventArgs e)
+    {
+        if (_dotX == null || _dotY == null) { return; }
+
+        // Restitution coefficient (0 to 1) makes collisions less bouncy.
+        // Any values less than 1 will slowly absorb energy from the system
+        // events over time, so the dots will eventually just slowly drift.
+        double restitution = 1.0;
+
+        double dt = GetDeltaSeconds();
+
+        // Move dots
+        for (int i = 0; i < DotCount; i++)
+        {
+            _dotX[i] += _dotVX[i] * dt;
+            _dotY[i] += _dotVY[i] * dt;
+
+            // Bounce off left/right walls
+            if (_dotX[i] <= 0)
+            {
+                _dotX[i] = 0;
+                _dotVX[i] = Math.Abs(_dotVX[i]) * restitution; // force rightward and apply restitution/friction
+            }
+            else if (_dotX[i] >= ActualWidth - DotSize)
+            {
+                _dotX[i] = ActualWidth - DotSize;
+                _dotVX[i] = -Math.Abs(_dotVX[i]) * restitution; // force leftward and apply restitution/friction
+            }
+
+            // Bounce off top/bottom walls
+            if (_dotY[i] <= 0)
+            {
+                _dotY[i] = 0;
+                _dotVY[i] = Math.Abs(_dotVY[i]) * restitution; // force downward and apply restitution/friction
+            }
+            else if (_dotY[i] >= ActualHeight - DotSize)
+            {
+                _dotY[i] = ActualHeight - DotSize;
+                _dotVY[i] = -Math.Abs(_dotVY[i]) * restitution; // force upward and apply restitution/friction
+            }
+        }
+
+        // Handle collisions between dots
+        if (BounceCollisions)
+        {
+            // If the time between frames is large, relative to the dot's speed, two dots
+            // can "tunnel" through each other, they overlap deeply before we detect the
+            // collision, or even skip past each other entirely. This can cause sticking,
+            // jitter, or unnatural pushes. If sub-stepping is preferred then instead of
+            // doing one big update per frame, we could break the frame's dt into smaller
+            // slices and run multiple collision checks/updates.
+
+            #region [Standard collision technique]
+            for (int i = 0; i < DotCount; i++)
+            {
+                for (int j = i + 1; j < DotCount; j++)
+                {
+                    double dx = _dotX[j] - _dotX[i];
+                    double dy = _dotY[j] - _dotY[i];
+                    double distSq = dx * dx + dy * dy;
+                    double minDist = DotSize;
+            
+                    if (distSq < minDist * minDist && distSq > Epsilon)
+                    {
+                        double dist = Math.Sqrt(distSq);
+            
+                        // Normal vector
+                        double nx = dx / dist;
+                        double ny = dy / dist;
+            
+                        // Tangent vector
+                        double tx = -ny;
+                        double ty = nx;
+            
+                        // Project velocities onto normal and tangent
+                        double v1n = _dotVX[i] * nx + _dotVY[i] * ny;
+                        double v1t = _dotVX[i] * tx + _dotVY[i] * ty;
+                        double v2n = _dotVX[j] * nx + _dotVY[j] * ny;
+                        double v2t = _dotVX[j] * tx + _dotVY[j] * ty;
+            
+                        // Swap normal components (equal mass, elastic)
+                        double v1nAfter = v2n * restitution;
+                        double v2nAfter = v1n * restitution;
+            
+                        // Recombine
+                        _dotVX[i] = v1nAfter * nx + v1t * tx;
+                        _dotVY[i] = v1nAfter * ny + v1t * ty;
+                        _dotVX[j] = v2nAfter * nx + v2t * tx;
+                        _dotVY[j] = v2nAfter * ny + v2t * ty;
+            
+                        // Minimum Translation Vector to separate them
+                        double overlap = 0.5 * (minDist - dist);
+                        _dotX[i] -= overlap * nx;
+                        _dotY[i] -= overlap * ny;
+                        _dotX[j] += overlap * nx;
+                        _dotY[j] += overlap * ny;
+                    }
+                }
+            }
+            #endregion
+
+            #region [Collision resolution with friction & restitution]
+            /** This creates a "push each other out of the way" effect **/
+            //double grip = 0.9; // tangential friction
+            //for (int i = 0; i < DotCount; i++)
+            //{
+            //    for (int j = i + 1; j < DotCount; j++)
+            //    {
+            //        double dx = _dotX[j] - _dotX[i];
+            //        double dy = _dotY[j] - _dotY[i];
+            //        double minDist = DotSize;
+            //        double distSq = dx * dx + dy * dy;
+            //
+            //        if (distSq < minDist * minDist && distSq > Epsilon)
+            //        {
+            //            double dist = Math.Sqrt(distSq);
+            //
+            //            // Normal and tangent
+            //            double nx = dx / dist;
+            //            double ny = dy / dist;
+            //            double tx = -ny;
+            //            double ty = nx;
+            //
+            //            // Overlap separation (MTV)
+            //            double overlap = 0.5 * (minDist - dist);
+            //            _dotX[i] -= overlap * nx;
+            //            _dotY[i] -= overlap * ny;
+            //            _dotX[j] += overlap * nx;
+            //            _dotY[j] += overlap * ny;
+            //
+            //            // Project velocities
+            //            double v1n = _dotVX[i] * nx + _dotVY[i] * ny;
+            //            double v1t = _dotVX[i] * tx + _dotVY[i] * ty;
+            //            double v2n = _dotVX[j] * nx + _dotVY[j] * ny;
+            //            double v2t = _dotVX[j] * tx + _dotVY[j] * ty;
+            //
+            //            // Only resolve if approaching along the normal
+            //            double relApproach = (v1n - v2n);
+            //            if (relApproach < 0)
+            //            {
+            //                // Equal mass elastic exchange with restitution
+            //                double v1nAfter = v2n * restitution;
+            //                double v2nAfter = v1n * restitution;
+            //
+            //                // Apply tangential friction
+            //                double v1tAfter = v1t * grip;
+            //                double v2tAfter = v2t * grip;
+            //
+            //                // Recombine
+            //                _dotVX[i] = v1nAfter * nx + v1tAfter * tx;
+            //                _dotVY[i] = v1nAfter * ny + v1tAfter * ty;
+            //                _dotVX[j] = v2nAfter * nx + v2tAfter * tx;
+            //                _dotVY[j] = v2nAfter * ny + v2tAfter * ty;
+            //            }
+            //        }
+            //    }
+            //}
+            #endregion
+        }
+
+        // Update visuals
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = (UIElement)PART_Canvas.Children[i];
+            Canvas.SetLeft(dot, _dotX[i]);
+            Canvas.SetTop(dot, _dotY[i]);
+        }
+    }
+
 
     double _bounceOffset = 0d;
     bool _bounceForward = true;
@@ -827,4 +1065,109 @@ public partial class Spinner : UserControl
         _last = now;
         return dt;
     }
+
+    #region [Random Helpers]
+    /// <summary>
+    /// <see cref="Random.Shared"/>.NextDouble() gives [0.000 to 0.999], so scale to [-value to +value]
+    /// </summary>
+    /// <returns>negative <paramref name="value"/> to positive <paramref name="value"/></returns>
+    static double RandomSwing(double value)
+    {
+        double factor = Random.Shared.NextDouble() * 2.0 - 1.0;
+        return value * factor;
+    }
+
+    /// <summary>
+    /// <see cref="Random.Shared"/>.Next() gives [min to max], so scale to [-value to +value]
+    /// </summary>
+    /// <returns>negative <paramref name="value"/> to positive <paramref name="value"/></returns>
+    static int RandomSwing(int value)
+    {
+        // Returns a random int in [-value, +value]
+        return Random.Shared.Next(-value, value + 1);
+    }
+
+    /// <summary>
+    /// Returns a random opacity value between 0.1 and 0.41 (inclusive of 0.1, exclusive of 0.41).
+    /// </summary>
+    static double RandomLowOpacity()
+    {
+        return 0.1 + Random.Shared.NextDouble() * (0.41 - 0.1);
+    }
+
+    /// <summary>
+    /// Returns a random opacity value between 0.5 and 0.99 (inclusive of 0.5, exclusive of 0.99).
+    /// </summary>
+    static double RandomHighOpacity()
+    {
+        return 0.1 + Random.Shared.NextDouble() * (0.99 - 0.5);
+    }
+
+
+    /// <summary>
+    /// Returns a normally distributed random number using Box-Muller.
+    /// mean = 0, stdDev = 1 by default.
+    /// <code>
+    ///   var noise = RandomGaussian(0, 10); // e.g. -6.2
+    /// </code>
+    /// </summary>
+    static double RandomGaussian(double mean = 0, double stdDev = 1)
+    {
+        double u1 = 1.0 - Random.Shared.NextDouble(); // avoid 0
+        double u2 = 1.0 - Random.Shared.NextDouble();
+        double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2); // Box-Muller transform
+        return mean + stdDev * randStdNormal;
+    }
+
+    /// <summary>
+    /// Returns a Gaussian random clamped to [-maxAbs, +maxAbs].
+    /// <code>
+    ///   var clamped = RandomGaussianClamped(0, 20, 100); // e.g. +87.5
+    /// </code>
+    /// </summary>
+    static double RandomGaussianClamped(double mean, double stdDev, double maxAbs)
+    {
+        double value = RandomGaussian(mean, stdDev);
+        // Hard clamp if outside
+        if (value > maxAbs) { return maxAbs; }
+        if (value < -maxAbs) { return -maxAbs; }
+        return value;
+    }
+
+    /// <summary>
+    /// Returns a Gaussian random number, retrying until it falls within [-maxAbs, +maxAbs].
+    /// Preserves the bell-curve distribution without flattening at the edges.
+    /// <code>
+    ///   var clamped = RandomGaussianBounded(0, 10, 50); // e.g. +24.1
+    /// </code>
+    /// </summary>
+    static double RandomGaussianBounded(double mean, double stdDev, double maxAbs)
+    {
+        double value;
+        // Retry until inside (no hard clamping)
+        do { value = RandomGaussian(mean, stdDev); } 
+        while (value < -maxAbs || value > maxAbs);
+        return value;
+    }
+
+    /// <summary>
+    /// Returns a Gaussian random number with directional bias.
+    /// Bias > 0 skews right (positive), Bias < 0 skews left (negative).
+    /// Bias magnitude ~0.0–1.0 (0 = no bias, 1 = strong bias).
+    /// <code>
+    ///   var biased = RandomGaussianBiased(0, 10, -0.3);
+    /// </code>
+    /// </summary>
+    static double RandomGaussianBiased(double mean, double stdDev, double bias)
+    {
+        // Base Gaussian
+        double g = RandomGaussian(mean, stdDev);
+
+        // Apply bias: shift distribution toward one side
+        // Bias is scaled by stdDev so it feels proportional
+        double shift = bias * stdDev;
+
+        return g + shift;
+    }
+    #endregion
 }

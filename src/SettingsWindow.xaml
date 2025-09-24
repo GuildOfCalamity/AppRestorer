@@ -43,63 +43,87 @@
 
             <ctrl:Spinner
                 Grid.Row="0"
-                Width="830"
-                Height="80"
-                Margin="-1,0,0,0"
+                Grid.RowSpan="99"
+                Width="840"
+                Height="650"
+                Margin="-2,0,-2,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
-                DotBrush="{StaticResource SnowBrushRadial}"
-                DotCount="20"
-                DotSize="12"
-                Mode="AnimatePositions"
-                Shape="Wind"
+                BounceCollisions="False"
+                BounceSpeed="50"
+                DotBrush="{StaticResource SnowBrushLinear}"
+                DotCount="80"
+                DotSize="10"
+                LineBaseSpeed="50"
+                RenderMode="AnimatePositions"
+                RenderShape="Stripe"
+                SnowBaseSpeed="50"
+                StripeBaseSpeed="60"
+                StripeLowOpacity="True"
                 Visibility="{Binding IsAnimated, Mode=OneWay, Converter={StaticResource boolToVisibility}}"
                 WaveAmplitude="12"
                 WaveDuration="1.1"
                 WindAmplitude="1"
                 WindFrequency="0.1" />
 
-            <StackPanel
-                Grid.Row="0"
-                Margin="0,10,0,0"
-                HorizontalAlignment="Center"
-                Orientation="Horizontal">
-                <ctrl:CandyButton
-                    IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
-                    MouseUp="CandyButton_MouseUp"
-                    Style="{StaticResource cbSettings}"
-                    Tag="cb1"
-                    Text="Update"
-                    ToolTip="Update" />
-                <ctrl:CandyButton
-                    IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
-                    MouseUp="CandyButton_MouseUp"
-                    Style="{StaticResource cbSettings}"
-                    Tag="cb2"
-                    Text="Refresh"
-                    ToolTip="Refresh" />
-                <ctrl:CandyButton
-                    IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
-                    MouseUp="CandyButton_MouseUp"
-                    Style="{StaticResource cbSettings}"
-                    Tag="cb3"
-                    Text="Menu"
-                    ToolTip="Menu" />
-                <ctrl:CandyButton
-                    IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
-                    MouseUp="CandyButton_MouseUp"
-                    Style="{StaticResource cbSettings}"
-                    Tag="cb4"
-                    Text="Login"
-                    ToolTip="Login" />
-                <ctrl:CandyButton
-                    IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
-                    MouseUp="CandyButton_MouseUp"
-                    Style="{StaticResource cbSettings}"
-                    Tag="cb99"
-                    Text="Close"
-                    ToolTip="Close" />
-            </StackPanel>
+            <ctrl:AutoExpander
+                BorderThickness="0"
+                CollapseDelay="00:00:02.5"
+                CollapseOnLeave="True"
+                ExpandDirection="Down"
+                IsExpanded="{Binding IsBusy, Mode=OneWay}"
+                Style="{StaticResource GroupBoxExpander}">
+                <ctrl:AutoExpander.Header>
+                    <DockPanel VerticalAlignment="Stretch">
+                        <!-- <Image Source="Images/info.png" Width="10" Height="10" DockPanel.Dock="Left" RenderOptions.BitmapScalingMode="Fant" /> -->
+                        <TextBlock
+                            FontSize="14"
+                            Foreground="{StaticResource NormalBrush}"
+                            Text="Commands" />
+                    </DockPanel>
+                </ctrl:AutoExpander.Header>
+                <StackPanel
+                    Grid.Row="0"
+                    Margin="0,2,0,0"
+                    HorizontalAlignment="Left"
+                    Orientation="Horizontal">
+                    <ctrl:CandyButton
+                        IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
+                        MouseUp="CandyButton_MouseUp"
+                        Style="{StaticResource cbSettings}"
+                        Tag="cb1"
+                        Text="Update"
+                        ToolTip="Update" />
+                    <ctrl:CandyButton
+                        IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
+                        MouseUp="CandyButton_MouseUp"
+                        Style="{StaticResource cbSettings}"
+                        Tag="cb2"
+                        Text="Refresh"
+                        ToolTip="Refresh" />
+                    <ctrl:CandyButton
+                        IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
+                        MouseUp="CandyButton_MouseUp"
+                        Style="{StaticResource cbSettings}"
+                        Tag="cb3"
+                        Text="Menu"
+                        ToolTip="Menu" />
+                    <ctrl:CandyButton
+                        IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
+                        MouseUp="CandyButton_MouseUp"
+                        Style="{StaticResource cbSettings}"
+                        Tag="cb4"
+                        Text="Login"
+                        ToolTip="Login" />
+                    <ctrl:CandyButton
+                        IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
+                        MouseUp="CandyButton_MouseUp"
+                        Style="{StaticResource cbSettings}"
+                        Tag="cb99"
+                        Text="Close"
+                        ToolTip="Close" />
+                </StackPanel>
+            </ctrl:AutoExpander>
 
             <StackPanel
                 Grid.Row="1"
@@ -153,7 +177,7 @@
                             </TextBlock>
                         </StackPanel>
                         <ProgressBar
-                            Width="200"
+                            Width="199"
                             Height="4"
                             Margin="55,-12,0,0"
                             HorizontalAlignment="Left"

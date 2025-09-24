@@ -87,9 +87,19 @@
                 <RadialGradientBrush.GradientStops>
                     <GradientStop Offset="0.0" Color="White" />
                     <GradientStop Offset="0.6" Color="#C0C0C0" />
-                    <GradientStop Offset="1.0" Color="#303030" />
+                    <GradientStop Offset="1.0" Color="#242424" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
+            <LinearGradientBrush x:Key="SnowBrushLinear" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#383838" />
+                        <GradientStop Offset="0.5" Color="White" />
+                        <GradientStop Offset="0.6" Color="#E0E0E0" />
+                        <GradientStop Offset="1.0" Color="#202020" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
             <LinearGradientBrush x:Key="ProgressBrushLinear" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
@@ -1221,6 +1231,449 @@
                                         </BeginStoryboard>
                                     </Trigger.EnterActions>
                                 </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="CustomExpander" TargetType="{x:Type Expander}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Expander">
+                            <DockPanel Background="Transparent">
+                                <!--  Header with circle chevron  -->
+                                <ToggleButton
+                                    x:Name="HeaderSite"
+                                    HorizontalAlignment="Left"
+                                    Background="Transparent"
+                                    DockPanel.Dock="Top"
+                                    Focusable="False"
+                                    IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <StackPanel Background="Transparent" Orientation="Horizontal">
+                                        <!--  Circle with Chevron  -->
+                                        <Grid Width="20" Height="20">
+                                            <!--<Ellipse Fill="DodgerBlue" Stroke="Black" />-->
+                                            <Path
+                                                x:Name="Chevron"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Data="M 4 8 L 10 14 L 16 8"
+                                                Stroke="{StaticResource NormalBrush}"
+                                                StrokeThickness="2" />
+                                        </Grid>
+                                        <ContentPresenter
+                                            Margin="5,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ContentSource="Header" />
+                                    </StackPanel>
+                                </ToggleButton>
+
+                                <!--  Expandable content  -->
+                                <ContentPresenter
+                                    x:Name="ExpandSite"
+                                    DockPanel.Dock="Bottom"
+                                    Visibility="Collapsed" />
+                            </DockPanel>
+
+                            <!--  Triggers  -->
+                            <ControlTemplate.Triggers>
+                                <!--  Show content when expanded  -->
+                                <Trigger Property="IsExpanded" Value="True">
+                                    <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
+                                    <!--  Rotate chevron down  -->
+                                    <Setter TargetName="Chevron" Property="RenderTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="180" CenterX="10" CenterY="10" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+
+            <!--  Expander Control Styler  -->
+            <ControlTemplate x:Key="ExpanderToggleButton" TargetType="{x:Type ToggleButton}">
+                <Border
+                    x:Name="Border"
+                    BorderThickness="0,0,1,0"
+                    CornerRadius="2,0,0,0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                            <GradientStop Color="{DynamicResource ControlLightColor}" />
+                            <GradientStop Offset="1" Color="{DynamicResource ControlMediumColor}" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.BorderBrush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <LinearGradientBrush.GradientStops>
+                                <GradientStopCollection>
+                                    <GradientStop Offset="0.0" Color="{DynamicResource BorderLightColor}" />
+                                    <GradientStop Offset="1.0" Color="{DynamicResource BorderDarkColor}" />
+                                </GradientStopCollection>
+                            </LinearGradientBrush.GradientStops>
+                        </LinearGradientBrush>
+
+                    </Border.BorderBrush>
+                    <Grid>
+                        <Path
+                            x:Name="CollapsedArrow"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="M 0 0 L 4 4 L 8 0 Z">
+                            <Path.Fill>
+                                <SolidColorBrush Color="{DynamicResource GlyphColor}" />
+                            </Path.Fill>
+                        </Path>
+                        <Path
+                            x:Name="ExpandededArrow"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="M 0 4 L 4 0 L 8 4 Z"
+                            Visibility="Collapsed">
+                            <Path.Fill>
+                                <SolidColorBrush Color="{DynamicResource GlyphColor}" />
+                            </Path.Fill>
+                        </Path>
+                    </Grid>
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroup x:Name="CommonStates">
+                            <VisualState x:Name="Normal" />
+                            <VisualState x:Name="MouseOver">
+                                <Storyboard>
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Panel.Background).                 (GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                        <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ControlMouseOverColor}" />
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </VisualState>
+                            <VisualState x:Name="Pressed">
+                                <Storyboard>
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Panel.Background).                 (GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                        <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ControlPressedColor}" />
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </VisualState>
+                            <VisualState x:Name="Disabled">
+                                <Storyboard>
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Panel.Background).                 (GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                        <EasingColorKeyFrame KeyTime="0" Value="{StaticResource DisabledControlDarkColor}" />
+                                    </ColorAnimationUsingKeyFrames>
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Border.BorderBrush).                 (GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                        <EasingColorKeyFrame KeyTime="0" Value="{StaticResource DisabledBorderLightColor}" />
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </VisualState>
+                        </VisualStateGroup>
+                        <VisualStateGroup x:Name="CheckStates">
+                            <VisualState x:Name="Checked">
+                                <Storyboard>
+                                    <ObjectAnimationUsingKeyFrames Storyboard.TargetName="CollapsedArrow" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                        <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Hidden}" />
+                                    </ObjectAnimationUsingKeyFrames>
+                                    <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ExpandededArrow" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                        <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                                    </ObjectAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </VisualState>
+                            <VisualState x:Name="Unchecked" />
+                            <VisualState x:Name="Indeterminate" />
+                        </VisualStateGroup>
+                    </VisualStateManager.VisualStateGroups>
+                </Border>
+            </ControlTemplate>
+            <!--  My Toggle Button ;)  -->
+            <ControlTemplate x:Key="ExpanderToggleButton2" TargetType="{x:Type ToggleButton}">
+                <Grid Background="Transparent" SnapsToDevicePixels="False">
+                    <Ellipse
+                        x:Name="circle"
+                        Width="19"
+                        Height="19"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Fill="{DynamicResource ButtonNormalBackgroundFill}"
+                        Stroke="Gray"
+                        StrokeThickness="2" />
+                    <Ellipse
+                        x:Name="shadow"
+                        Width="15"
+                        Height="15"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Fill="{DynamicResource ExpanderShadowFill}"
+                        Visibility="Hidden" />
+                    <Path
+                        x:Name="arrow"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Data="M1,1 L4,4 7,1"
+                        SnapsToDevicePixels="false"
+                        Stroke="#BBBBBB"
+                        StrokeThickness="2" />
+                </Grid>
+
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="true">
+                        <Setter TargetName="arrow" Property="Data" Value="M 1,4 L 4,1 L 7,4" />
+                        <!--<Setter TargetName="arrow" Property="Data" Value="M 1,4 L 4,1 L 7,4" />-->
+                    </Trigger>
+                    <Trigger Property="IsMouseOver" Value="true">
+                        <Setter TargetName="circle" Property="Stroke" Value="#666666" />
+                        <Setter TargetName="arrow" Property="Stroke" Value="#444444" />
+                        <Setter TargetName="shadow" Property="Visibility" Value="Visible" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+
+
+            <Style TargetType="{x:Type Expander}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Expander}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition x:Name="ContentRow" Height="0" />
+                                </Grid.RowDefinitions>
+                                <Border
+                                    x:Name="Border"
+                                    Grid.Row="0"
+                                    BorderThickness="1"
+                                    CornerRadius="2,2,0,0">
+                                    <Border.BorderBrush>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <!--<GradientStop Offset="0" Color="{DynamicResource BorderLightColor}" />-->
+                                            <GradientStop Offset="0.0" Color="Transparent" />
+                                            <!--<GradientStop Offset="1" Color="{DynamicResource BorderDarkColor}" />-->
+                                            <GradientStop Offset="1.0" Color="Transparent" />
+                                        </LinearGradientBrush>
+
+                                    </Border.BorderBrush>
+                                    <Border.Background>
+
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <LinearGradientBrush.GradientStops>
+                                                <GradientStopCollection>
+                                                    <!--<GradientStop Offset="0.0" Color="{DynamicResource ControlLightColor}" />-->
+                                                    <GradientStop Offset="0.0" Color="Transparent" />
+                                                    <!--<GradientStop Offset="1.0" Color="{DynamicResource ControlMediumColor}" />-->
+                                                    <GradientStop Offset="1.0" Color="Transparent" />
+                                                </GradientStopCollection>
+                                            </LinearGradientBrush.GradientStops>
+                                        </LinearGradientBrush>
+
+                                    </Border.Background>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="20" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton
+                                            IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                            OverridesDefaultStyle="True"
+                                            Template="{StaticResource ExpanderToggleButton2}">
+                                            <ToggleButton.Background>
+                                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                                    <GradientStop Offset="0" Color="{DynamicResource ControlLightColor}" />
+                                                    <GradientStop Offset="1" Color="{DynamicResource ControlMediumColor}" />
+                                                </LinearGradientBrush>
+                                            </ToggleButton.Background>
+                                        </ToggleButton>
+                                        <ContentPresenter
+                                            Grid.Column="1"
+                                            Margin="4"
+                                            ContentSource="Header"
+                                            RecognizesAccessKey="True" />
+                                    </Grid>
+                                </Border>
+                                <Border
+                                    x:Name="Content"
+                                    Grid.Row="1"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="1,0,1,1"
+                                    CornerRadius="0,0,2,2">
+                                    <ContentPresenter Margin="4" />
+                                </Border>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="MouseOver" />
+                                        <VisualState x:Name="Disabled">
+                                            <Storyboard>
+                                                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Panel.Background).                       (GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                                    <EasingColorKeyFrame KeyTime="0" Value="{StaticResource DisabledControlDarkColor}" />
+                                                </ColorAnimationUsingKeyFrames>
+                                                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Border.BorderBrush).                       (GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                                    <EasingColorKeyFrame KeyTime="0" Value="{StaticResource DisabledBorderLightColor}" />
+                                                </ColorAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsExpanded" Value="True">
+                                    <Setter TargetName="ContentRow" Property="Height" Value="{Binding Height, ElementName=Content}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+
+            <!--  Expander Control Styler  -->
+            <Style x:Key="GroupBoxExpanderToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ToggleButton}">
+                            <Grid Background="Transparent" SnapsToDevicePixels="False">
+                                <Ellipse
+                                    x:Name="circle"
+                                    Width="18"
+                                    Height="18"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Fill="{StaticResource NormalDarkBrush}"
+                                    Stroke="DarkGray" />
+                                <Ellipse
+                                    x:Name="shadow"
+                                    Width="16"
+                                    Height="16"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Fill="{StaticResource NormalBrush}"
+                                    Visibility="Hidden" />
+                                <Path
+                                    x:Name="arrow"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Data="M 1,1 L 4,4 L 7,1"
+                                    SnapsToDevicePixels="false"
+                                    Stroke="{StaticResource NormalBrush}"
+                                    StrokeEndLineCap="Round"
+                                    StrokeStartLineCap="Round"
+                                    StrokeThickness="2" />
+                            </Grid>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="true">
+                                    <Setter TargetName="arrow" Property="Data" Value="M 1,4 L 4,1 L 7,4" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="circle" Property="Stroke" Value="#666" />
+                                    <Setter TargetName="arrow" Property="Stroke" Value="#222" />
+                                    <Setter TargetName="shadow" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <SolidColorBrush x:Key="GroupBoxBorderBrush" Color="#D0D0BF" />
+            <SolidColorBrush x:Key="GroupBoxHeaderBrush" Color="DodgerBlue" />
+            <BorderGapMaskConverter x:Key="BorderGapMaskConverter" />
+
+            <Style x:Key="GroupBoxExpander" TargetType="Expander">
+                <Setter Property="BorderBrush" Value="{StaticResource GroupBoxBorderBrush}" />
+                <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Expander}">
+                            <Grid SnapsToDevicePixels="true">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="6" />
+                                </Grid.RowDefinitions>
+                                <Border
+                                    Grid.Row="1"
+                                    Grid.RowSpan="3"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="4"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="4" />
+                                <Border
+                                    x:Name="Header"
+                                    Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Padding="3,0,3,0">
+                                    <Grid
+                                        Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        Background="Transparent"
+                                        SnapsToDevicePixels="False">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton
+                                            Name="HeaderToggle"
+                                            Grid.Column="0"
+                                            MinWidth="0"
+                                            MinHeight="0"
+                                            IsChecked="{Binding Path=IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                            Style="{StaticResource GroupBoxExpanderToggleButtonStyle}" />
+                                        <ContentPresenter
+                                            Grid.Column="1"
+                                            Margin="3,0,0,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            ContentSource="Header"
+                                            RecognizesAccessKey="true"
+                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                            TextElement.Foreground="{StaticResource GroupBoxHeaderBrush}" />
+                                    </Grid>
+                                </Border>
+
+                                <ContentPresenter
+                                    x:Name="ExpandSite"
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Grid.ColumnSpan="2"
+                                    Margin="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                    Visibility="Collapsed" />
+
+                                <Border
+                                    Grid.Row="1"
+                                    Grid.RowSpan="3"
+                                    Grid.ColumnSpan="4"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="4">
+                                    <Border.OpacityMask>
+                                        <MultiBinding Converter="{StaticResource BorderGapMaskConverter}" ConverterParameter="7">
+                                            <Binding ElementName="Header" Path="ActualWidth" />
+                                            <Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}" />
+                                            <Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}" />
+                                        </MultiBinding>
+                                    </Border.OpacityMask>
+                                </Border>
+
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsExpanded" Value="true">
+                                    <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                </Trigger>
+
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>

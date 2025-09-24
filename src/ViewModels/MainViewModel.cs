@@ -407,7 +407,11 @@ public class MainViewModel : INotifyPropertyChanged
         var w = sender as System.Windows.Window;
         if (w == null) { return; }
 
-        Debug.WriteLine($"[INFO] WindowStateChanged: {w.WindowState}");
+        Debug.WriteLine($"[INFO] MainWindow state changed to {w.WindowState}");
+        if (w.WindowState == WindowState.Minimized)
+            IsAnimated = false;
+        else
+            IsAnimated = true;
     }
 
     void TextBox_GotFocus(object sender, System.Windows.RoutedEventArgs e)

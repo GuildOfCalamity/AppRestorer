@@ -144,6 +144,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         StatusText = $"Reading from registry...";
 
         window.Loaded += Window_Loaded;
+        window.StateChanged += Window_StateChanged;
 
         #region [Reflection]
         PropertyInfo[] props = this.GetType().GetProperties();
@@ -174,6 +175,18 @@ public class SettingsViewModel : INotifyPropertyChanged
             });
         };
         await runner.RunAsync();
+    }
+
+    void Window_StateChanged(object? sender, EventArgs e)
+    {
+        var w = sender as System.Windows.Window;
+        if (w == null) { return; }
+
+        Debug.WriteLine($"[INFO] SettingsWindow state changed to {w.WindowState}");
+        if (w.WindowState == WindowState.Minimized)
+            IsAnimated = false;
+        else
+            IsAnimated = true;
     }
 
     bool FilterApps(object obj)
