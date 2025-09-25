@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -50,6 +51,77 @@ public static class Extensions
         }
     }
     #endregion
+
+    /// <summary>
+    /// Scales all numeric values in a path geometry string by the given factor.
+    /// <code>
+    ///   string original = "M 1,1 L 4,4 L 7,1"; /* chevron */
+    ///   string scaled = PathScaler.ScalePathData(original, 2.0); /* M 2,2 L 8,8 L 14,2 */
+    /// </code>
+    /// </summary>
+    /// <param name="pathData">Original path data string (e.g. "M 1,1 L 4,4")</param>
+    /// <param name="scale">Scaling factor (e.g. 2.0 = double size)</param>
+    /// <returns>Scaled path data string</returns>
+    public static string ScalePathData(string pathData, double scale = 2.0)
+    {
+        if (string.IsNullOrWhiteSpace(pathData))
+            return string.Empty;
+
+        // Works for M, L, C, Q, A, etc. (blindly scales all numbers)
+        // Culture-invariant parsing ("." is always the decimal separator)
+
+        // Match all numbers (handles decimals, negatives, scientific notation)
+        var regex = new System.Text.RegularExpressions.Regex(@"-?\d+(\.\d+)?([eE][-+]?\d+)?", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        string scaled = regex.Replace(pathData, match =>
+        {
+            double value = double.Parse(match.Value, CultureInfo.InvariantCulture);
+            double newValue = value * scale;
+            return newValue.ToString(CultureInfo.InvariantCulture);
+        });
+
+        return scaled;
+    }
+
+    /// <summary>
+    /// Scales all coordinates in a path geometry string by the given factor around an origin point.
+    /// </summary>
+    /// <param name="pathData">Original path data string (e.g. "M 1,1 L 4,4")</param>
+    /// <param name="scale">Scaling factor (e.g. 2.0 = double size)</param>
+    /// <param name="originX">X coordinate of scaling origin</param>
+    /// <param name="originY">Y coordinate of scaling origin</param>
+    /// <returns>Scaled path data string</returns>
+    public static string ScalePathData(string pathData, double scale = 2.0, double originX = 0, double originY = 0)
+    {
+        if (string.IsNullOrWhiteSpace(pathData))
+            return string.Empty;
+
+        // Match all numbers
+        var regex = new Regex(@"-?\d+(\.\d+)?([eE][-+]?\d+)?", RegexOptions.Compiled);
+
+        // We'll track whether we're reading an X or Y coordinate
+        bool isX = true;
+        double lastX = 0;
+
+        string scaled = regex.Replace(pathData, match =>
+        {
+            double value = double.Parse(match.Value, CultureInfo.InvariantCulture);
+            if (isX)
+            {   // scale X
+                lastX = originX + (value - originX) * scale;
+                isX = false;
+                return lastX.ToString(CultureInfo.InvariantCulture);
+            }
+            else
+            {   // scale Y
+                double newY = originY + (value - originY) * scale;
+                isX = true;
+                return newY.ToString(CultureInfo.InvariantCulture);
+            }
+        });
+
+        return scaled;
+    }
 
     /// <summary>
     /// Helper method for returning a collection of visual control types.
@@ -95,6 +167,31 @@ public static class Extensions
             }
         }
         return text;
+    }
+
+    /// <summary>
+    /// Reads all lines from file <paramref name="path"/> and joins them into a single string with the given <paramref name="separator"/>.
+    /// </summary>
+    public static string ReadIntoOneString(string path, string separator = ",")
+    {
+        if (!System.IO.File.Exists(path))
+            return string.Empty;
+
+        var items = System.IO.File.ReadAllLines(path).Distinct(StringComparer.OrdinalIgnoreCase);
+        //return items.Aggregate((a, b) => a + separator + b);
+        return string.Join(separator, items.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s));
+
+        #region [Using StringBuilder]
+        var alt = System.IO.File.ReadAllLines(path).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var sb = new StringBuilder();
+        for (int i = 0; i < alt.Count; i++)
+        {
+            sb.Append(alt[i]);
+            // Don't append separator after last item
+            if (i < alt.Count - 1) { sb.Append(separator); }
+        }
+        return $"{sb}";
+        #endregion
     }
 
     /// <summary>
@@ -980,6 +1077,70 @@ public static class Extensions
         }
         catch { /* ignore */ }
     }
+
+    #region [Easing Functions]
+
+    // Quadratic Easing (t²): EaseInQuadratic → Starts slow, speeds up.
+    public static double EaseInQuadratic(double t) => t * t;
+    // EaseOutQuadratic → Starts fast, slows down.
+    public static double EaseOutQuadratic(double t) => 1.0 - (1.0 - t) * (1.0 - t);
+    // EaseInOutQuadratic → Symmetric acceleration-deceleration.
+    public static double EaseInOutQuadratic(double t) => t < 0.5 ? 2.0 * t * t : 1.0 - Math.Pow(-2.0 * t + 2.0, 2.0) / 2.0;
+
+    // Cubic Easing (t³): EaseInCubic → Stronger acceleration.
+    public static double EaseInCubic(double t) => Math.Pow(t, 3.0);
+    // EaseOutCubic → Slower deceleration.
+    public static double EaseOutCubic(double t) => 1.0 - Math.Pow(1.0 - t, 3.0);
+    // EaseInOutCubic → Balanced smooth curve.
+    public static double EaseInOutCubic(double t) => t < 0.5 ? 4.0 * Math.Pow(t, 3.0) : 1.0 - Math.Pow(-2.0 * t + 2.0, 3.0) / 2.0;
+
+    // Quartic Easing (t⁴): Sharper transition than cubic easing.
+    public static double EaseInQuartic(double t) => Math.Pow(t, 4.0);
+    public static double EaseOutQuartic(double t) => 1.0 - Math.Pow(1.0 - t, 4.0);
+    public static double EaseInOutQuartic(double t) => t < 0.5 ? 8.0 * Math.Pow(t, 4.0) : 1.0 - Math.Pow(-2.0 * t + 2.0, 4.0) / 2.0;
+
+    // Quintic Easing (t⁵): Even steeper curve for dramatic transitions.
+    public static double EaseInQuintic(double t) => Math.Pow(t, 5.0);
+    public static double EaseOutQuintic(double t) => 1.0 - Math.Pow(1.0 - t, 5.0);
+    public static double EaseInOutQuintic(double t) => t < 0.5 ? 16.0 * Math.Pow(t, 5.0) : 1.0 - Math.Pow(-2.0 * t + 2.0, 5.0) / 2.0;
+
+    // Elastic Easing (Bouncing Effect)
+    public static double EaseInElastic(double t) => t == 0 ? 0 : t == 1 ? 1 : -Math.Pow(2.0, 10.0 * t - 10.0) * Math.Sin((t * 10.0 - 10.75) * (2.0 * Math.PI) / 3.0);
+    public static double EaseOutElastic(double t) => t == 0 ? 0 : t == 1 ? 1 : Math.Pow(2.0, -10.0 * t) * Math.Sin((t * 10.0 - 0.75) * (2.0 * Math.PI) / 3.0) + 1.0;
+    public static double EaseInOutElastic(double t) => t == 0 ? 0 : t == 1 ? 1 : t < 0.5 ? -(Math.Pow(2.0, 20.0 * t - 10.0) * Math.Sin((20.0 * t - 11.125) * (2.0 * Math.PI) / 4.5)) / 2.0 : (Math.Pow(2.0, -20.0 * t + 10.0) * Math.Sin((20.0 * t - 11.125) * (2.0 * Math.PI) / 4.5)) / 2.0 + 1.0;
+
+    //Bounce Easing(Ball Bouncing Effect)
+    public static double EaseInBounce(double t) => 1.0 - EaseOutBounce(1.0 - t);
+    public static double EaseOutBounce(double t)
+    {
+        double n1 = 7.5625, d1 = 2.75;
+        if (t < 1.0 / d1)
+            return n1 * t * t;
+        else if (t < 2.0 / d1)
+            return n1 * (t -= 1.5 / d1) * t + 0.75;
+        else if (t < 2.5 / d1)
+            return n1 * (t -= 2.25 / d1) * t + 0.9375;
+        else
+            return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    }
+    public static double EaseInOutBounce(double t) => t < 0.5 ? (1.0 - EaseOutBounce(1.0 - 2.0 * t)) / 2.0 : (1.0 + EaseOutBounce(2.0 * t - 1.0)) / 2.0;
+
+    // Exponential Easing(Fast Growth/Decay)
+    public static double EaseInExpo(double t) => t == 0 ? 0 : Math.Pow(2.0, 10.0 * t - 10.0);
+    public static double EaseOutExpo(double t) => t == 1 ? 1 : 1.0 - Math.Pow(2.0, -10.0 * t);
+    public static double EaseInOutExpo(double t) => t == 0 ? 0 : t == 1 ? 1 : t < 0.5 ? Math.Pow(2.0, 20.0 * t - 10.0) / 2.0 : (2.0 - Math.Pow(2.0, -20.0 * t + 10.0)) / 2.0;
+
+    // Circular Easing(Smooth Circular Motion)
+    public static double EaseInCircular(double t) => 1.0 - Math.Sqrt(1.0 - Math.Pow(t, 2.0));
+    public static double EaseOutCircular(double t) => Math.Sqrt(1.0 - Math.Pow(t - 1.0, 2.0));
+    public static double EaseInOutCircular(double t) => t < 0.5 ? (1.0 - Math.Sqrt(1.0 - Math.Pow(2.0 * t, 2.0))) / 2.0 : (Math.Sqrt(1.0 - Math.Pow(-2.0 * t + 2.0, 2.0)) + 1.0) / 2.0;
+
+    // Back Easing(Overshoots Before Settling)
+    public static double EaseInBack(double t) => 2.70158 * t * t * t - 1.70158 * t * t;
+    public static double EaseOutBack(double t) => 1.0 + 2.70158 * Math.Pow(t - 1.0, 3.0) + 1.70158 * Math.Pow(t - 1.0, 2.0);
+    public static double EaseInOutBack(double t) => t < 0.5 ? (Math.Pow(2.0 * t, 2.0) * ((2.59491 + 1.0) * 2.0 * t - 2.59491)) / 2.0 : (Math.Pow(2.0 * t - 2.0, 2.0) * ((2.59491 + 1.0) * (t * 2.0 - 2.0) + 2.59491) + 2.0) / 2.0;
+
+    #endregion
 
 #if SYSTEM_DRAWING
     public static ImageSource GetFileIcon(string path)

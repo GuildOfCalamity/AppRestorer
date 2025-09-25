@@ -4,31 +4,12 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-
 namespace AppRestorer.Controls;
 
 public class AutoExpander : Expander
 {
     readonly DispatcherTimer? _collapseTimer;
     bool _contextMenuOpen = false;
-
-    static AutoExpander()
-    {
-        //DefaultStyleKeyProperty.OverrideMetadata(typeof(AutoExpander), new FrameworkPropertyMetadata(typeof(AutoExpander)));
-    }
-
-    public AutoExpander()
-    {
-        _collapseTimer = new DispatcherTimer();
-        _collapseTimer.Tick += CollapseTimer_Tick;
-
-        this.MouseEnter += AutoExpander_MouseEnter;
-        this.MouseLeave += AutoExpander_MouseLeave;
-        this.ContextMenuOpening += AutoExpander_ContextMenuOpening;
-        this.ContextMenuClosing += AutoExpander_ContextMenuClosing;
-
-        UpdateTimerInterval();
-    }
 
     #region [Dependency Properties]
     public static readonly DependencyProperty CollapseDelayProperty = DependencyProperty.Register(
@@ -65,6 +46,24 @@ public class AutoExpander : Expander
         set => SetValue(CollapseOnLeaveProperty, value);
     }
     #endregion
+
+    static AutoExpander()
+    {
+        //DefaultStyleKeyProperty.OverrideMetadata(typeof(AutoExpander), new FrameworkPropertyMetadata(typeof(AutoExpander)));
+    }
+
+    public AutoExpander()
+    {
+        _collapseTimer = new DispatcherTimer();
+        _collapseTimer.Tick += CollapseTimer_Tick;
+
+        this.MouseEnter += AutoExpander_MouseEnter;
+        this.MouseLeave += AutoExpander_MouseLeave;
+        this.ContextMenuOpening += AutoExpander_ContextMenuOpening;
+        this.ContextMenuClosing += AutoExpander_ContextMenuClosing;
+
+        UpdateTimerInterval();
+    }
 
     #region [Events]
     void CollapseTimer_Tick(object? sender, EventArgs e)

@@ -400,6 +400,10 @@ public partial class MainWindow : Window
 
     void Close_Click(object sender, RoutedEventArgs e) => this.Close();
 
+    /// <summary>
+    /// NOTE: Make sure the background for the control is not equal to transparent, otherwise this event will not be picked up.
+    /// e.g. Background="#00111111" will work, but Background="Transparent" will not.
+    /// </summary>
     void MainControl_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton == MouseButtonState.Pressed)

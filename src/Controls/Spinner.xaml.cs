@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -22,15 +23,17 @@ public enum SpinnerRenderMode
 
 public enum SpinnerRenderShape
 {
-    Dots,   // for standard/classic spinner
-    Polys,  // for spinner with more complex shapes
-    Snow,   // for raining/snowing animation
-    Wind,   // for horizontal animation
-    Wave,   // for sine wave animation
-    Space,  // for starfield animation
-    Line,   // for line warp animation
-    Stripe, // for exaggerated line animation
-    Bounce, // for dot bouncing animation
+    Dots,      // for standard/classic spinner
+    Worm,      // for wiggle worm animation
+    Spiral,    // for spiral rotation animation
+    Polys,     // for spinner with more complex shapes
+    Snow,      // for raining/snowing animation
+    Wind,      // for horizontal animation
+    Wave,      // for sine wave animation
+    Space,     // for starfield animation
+    Line,      // for line warp animation
+    Stripe,    // for exaggerated line animation
+    Bounce,    // for dot bouncing animation
 }
 
 /// <summary>
@@ -76,8 +79,8 @@ public partial class Spinner : UserControl
     protected override Size MeasureOverride(Size constraint)
     {
         // The width/height is used in render object calculations, so we must have some value.
-        if (constraint.Width <= 0) { Width = 50; }
-        if (constraint.Height <= 0) { Height = 50; }
+        if (constraint.Width.IsInvalidOrZero()) { Width = 50; }
+        if (constraint.Height.IsInvalidOrZero()) { Height = 50; }
 
         Debug.WriteLine($"[INFO] {nameof(Spinner)} is measured to be {constraint}");
         return base.MeasureOverride(constraint);
@@ -87,7 +90,7 @@ public partial class Spinner : UserControl
     #region [Events]
     void Spinner_Loaded(object sender, RoutedEventArgs e)
     {
-        if (RenderShape == SpinnerRenderShape.Dots || RenderShape == SpinnerRenderShape.Wave)
+        if (RenderShape == SpinnerRenderShape.Dots || RenderShape == SpinnerRenderShape.Wave || RenderShape == SpinnerRenderShape.Worm)
             CreateDots();
         else if (RenderShape == SpinnerRenderShape.Polys)
             CreatePolys();
@@ -99,6 +102,8 @@ public partial class Spinner : UserControl
             CreateStripe();
         else if (RenderShape == SpinnerRenderShape.Bounce)
             CreateBounce();
+        else if (RenderShape == SpinnerRenderShape.Spiral)
+            CreateSpiral();
         else
             CreateDots();
 
@@ -157,7 +162,7 @@ public partial class Spinner : UserControl
         if (_renderHooked) { return; }
         _renderHooked = true;
         if (RenderShape == SpinnerRenderShape.Wave)
-            CompositionTarget.Rendering += OnSineWaveRendering; // OnSpiralInOutRendering;
+            CompositionTarget.Rendering += OnSineWaveRendering;
         else if (RenderShape == SpinnerRenderShape.Snow)
             CompositionTarget.Rendering += OnSnowRendering;
         else if (RenderShape == SpinnerRenderShape.Wind)
@@ -170,6 +175,10 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnStripeRendering;
         else if (RenderShape == SpinnerRenderShape.Bounce)
             CompositionTarget.Rendering += OnBounceRendering;
+        else if (RenderShape == SpinnerRenderShape.Worm)
+            CompositionTarget.Rendering += OnWormRendering;
+        else if (RenderShape == SpinnerRenderShape.Spiral)
+            CompositionTarget.Rendering += OnSpiralRendering;
         else
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -179,7 +188,7 @@ public partial class Spinner : UserControl
         if (!_renderHooked) { return; }
         _renderHooked = false;
         if (RenderShape == SpinnerRenderShape.Wave)
-            CompositionTarget.Rendering -= OnSineWaveRendering; // OnSpiralInOutRendering;
+            CompositionTarget.Rendering -= OnSineWaveRendering;
         else if (RenderShape == SpinnerRenderShape.Snow)
             CompositionTarget.Rendering -= OnSnowRendering;
         else if (RenderShape == SpinnerRenderShape.Wind)
@@ -192,6 +201,10 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnStripeRendering;
         else if (RenderShape == SpinnerRenderShape.Bounce)
             CompositionTarget.Rendering -= OnBounceRendering;
+        else if (RenderShape == SpinnerRenderShape.Worm)
+            CompositionTarget.Rendering -= OnWormRendering;
+        else if (RenderShape == SpinnerRenderShape.Spiral)
+            CompositionTarget.Rendering -= OnSpiralRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -237,7 +250,7 @@ public partial class Spinner : UserControl
                 Width = DotSize,
                 Height = DotSize,
                 Fill = DotBrush,
-                Opacity = (double)i / DotCount // fade each consecutive dot
+                Opacity = (double)i / (double)DotCount + 0.01 // fade each consecutive dot
             };
 
             if (pulse)
@@ -290,7 +303,7 @@ public partial class Spinner : UserControl
                 StrokeThickness = 2,
                 Height = DotSize,
                 Stretch = Stretch.Uniform,
-                Opacity = (double)i / DotCount // fade each consecutive shape
+                Opacity = (double)i / (double)DotCount + 0.01 // fade each consecutive shape
             };
 
             if (pointOutward)
@@ -363,7 +376,160 @@ public partial class Spinner : UserControl
         }
     }
 
+
+
+    Ellipse[] _dots;
+    void CreateSpiral()
+    {
+        if (PART_Canvas == null)
+            return;
+
+        if (SpiralArmCount <= 0)
+            SpiralArmCount = 1;
+
+        PART_Canvas.Children.Clear();
+
+        // Create dots once
+        _dots = new Ellipse[DotCount];
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                Opacity = (double)i / (double)DotCount + 0.01 // fade each consecutive dot
+            };
+            _dots[i] = dot;
+            PART_Canvas.Children.Add(dot);
+        }
+    }
+
+    public int SpiralArmCount { get; set; } = 1;
+    public bool SpiralFadeOut { get; set; } = true;
+    public bool SpiralClockwise { get; set; } = false;
+    public double SpiralDotSpacing { get; set; } = 5;
+    public double SpiralTwistDensity { get; set; } = 0.3;
+    public double SpiralRotationAngle { get; set; } = 0.06;  // radians per frame
+
     void OnSpiralRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateSpiral();
+            return;
+        }
+
+        int count = PART_Canvas.Children.Count;
+        double cx = ActualWidth * 0.5;
+        double cy = ActualHeight * 0.5;
+
+        // Increment rotation angle
+        if (SpiralClockwise)
+            _angle += SpiralRotationAngle;
+        else
+            _angle -= SpiralRotationAngle;
+
+        if (_angle > Tau) 
+            _angle -= Tau;
+        if (_angle < 0) 
+            _angle += Tau;
+
+        // Equal angular offset per arm
+        double armSlice = Tau / SpiralArmCount;
+
+        for (int i = 0; i < count; i++)
+        {
+            // Assign dot to an arm and its index along that arm
+            int armIndex = i % SpiralArmCount;
+            
+            // Position along the arm (0,1,2,etc)
+            int k = i / SpiralArmCount;
+
+            // Spiral along the arm with per-arm offset
+            double radius = k * SpiralDotSpacing;
+            double theta = k * SpiralTwistDensity + _angle + armIndex * armSlice;
+
+            double x = cx + radius * Math.Cos(theta);
+            double y = cy + radius * Math.Sin(theta);
+
+            var dot = _dots[i];
+
+            //var tmp = GetOpacityForIndex(count-i, count);
+            //Debug.WriteLine($"[INFO] Dot {i} value: {tmp}");
+
+            if (SpiralFadeOut)
+            {
+                dot.Opacity = Math.Min(1.0, ((double)count - (double)i) * 0.1d); // fade from outside inward
+                dot.Opacity = GetOpacityEaseInOut(i, count); // fade from outside inward
+            }
+            else
+            {
+                dot.Opacity = ((double)i / count) + 0.01;   // fade from inside outward
+                dot.Opacity = GetOpacityEaseInOut(count - i, count);              // fade from outside inward
+            }
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+        }
+    }
+
+    void OnSingleSpiralRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateSpiral();
+            return;
+        }
+
+        int count = PART_Canvas.Children.Count;
+
+        double centerX = ActualWidth / 2;
+        double centerY = ActualHeight / 2;
+
+        // Increment rotation angle
+        if (SpiralClockwise)
+            _angle += SpiralRotationAngle;
+        else
+            _angle -= SpiralRotationAngle;
+
+        if (_angle > Tau)
+            _angle -= Tau;
+        if (_angle < 0)
+            _angle += Tau;
+
+        // Spiral parameters
+        double spacing = SpiralDotSpacing;   // radial spacing between dots
+        double twist = SpiralTwistDensity;   // how tightly the spiral winds
+
+        for (int i = 0; i < count; i++)
+        {
+            double radius = i * spacing;
+            double theta = i * twist + _angle;
+
+            double x = centerX + radius * Math.Cos(theta);
+            double y = centerY + radius * Math.Sin(theta);
+
+            var dot = (UIElement)PART_Canvas.Children[i];
+
+            if (SpiralFadeOut)
+                dot.Opacity = Math.Min(1.0, ((double)count - (double)i) * 0.1d); // fade each consecutive
+            else
+                dot.Opacity = ((double)i / count) + 0.01; // fade each consecutive
+
+            Canvas.SetLeft(_dots[i], x - _dots[i].Width / 2);
+            Canvas.SetTop(_dots[i], y - _dots[i].Height / 2);
+        }
+    }
+
+
+    public double SpiralGrowthRate { get; set; } = 8;     // pixels/sec
+    public double SpiralMaxRadius { get; set; } = 40;     // px
+    public double SpiralAngularSpeed { get; set; } = 90;  // deg/sec
+    public double SpiralInOutSpeed { get; set; } = 0.75;  // cycles/sec
+
+
+    void OnSpiralRenderingOld(object? sender, EventArgs e)
     {
         double dt = GetDeltaSeconds();
         _angle = (_angle + SpiralAngularSpeed * dt) % 360.0;
@@ -391,22 +557,21 @@ public partial class Spinner : UserControl
         }
     }
 
-    // Spiral in/out phase tracker
-    double _radiusPhase = 0.0;
-    public double SpiralGrowthRate { get; set; } = 8;    // pixels/sec
-    public double SpiralMaxRadius { get; set; } = 40;     // px
-    public double SpiralAngularSpeed { get; set; } = 90; // deg/sec
-    public double SpiralInOutSpeed { get; set; } = 0.75;   // cycles/sec
+    
+    double _radiusPhase = 0.0; // Worm spiral in/out phase tracking
+    public double WormAngularSpeed { get; set; } = 90;   // deg/sec
+    public double WormInOutSpeed { get; set; } = 0.75;   // cycles/sec
+    public double WormMaxRadius { get; set; } = 40;      // px
 
-    void OnSpiralInOutRendering(object? sender, EventArgs e)
+    void OnWormRendering(object? sender, EventArgs e)
     {
         double dt = GetDeltaSeconds();
 
         // Angle for rotation
-        _angle = (_angle + SpiralAngularSpeed * dt) % 360.0;
+        _angle = (_angle + WormAngularSpeed * dt) % 360.0;
 
         // Phase for radius oscillation
-        double phase = _radiusPhase + SpiralInOutSpeed * Tau * dt;
+        double phase = _radiusPhase + WormInOutSpeed * Tau * dt;
         _radiusPhase = phase;
 
         int count = PART_Canvas.Children.Count;
@@ -419,7 +584,7 @@ public partial class Spinner : UserControl
             double dotPhase = phase + i * (Math.PI / count);
 
             // Oscillating radius
-            double radius = (SpiralMaxRadius / 2) * (1 + Math.Sin(dotPhase));
+            double radius = (WormMaxRadius / 2) * (1 + Math.Sin(dotPhase));
 
             // Dot angle offset
             double a = (_angle + i * (360.0 / count)) * Math.PI / 180.0;
@@ -441,6 +606,7 @@ public partial class Spinner : UserControl
 
     public bool SnowSizeRandom { get; set; } = true;
     public double SnowBaseSpeed { get; set; } = 50;
+    public bool SnowLowOpacity { get; set; } = false; // for subtle backgrounds
 
     double[] _rainX;
     double[] _rainY;
@@ -477,7 +643,7 @@ public partial class Spinner : UserControl
                 Width = _rainSize[i],
                 Height = _rainSize[i],
                 Fill = DotBrush,
-                Opacity = Random.Shared.NextDouble() + 0.09, // random opacity
+                Opacity = SnowLowOpacity ? RandomLowOpacity() : Random.Shared.NextDouble() + 0.09,
                 //Opacity = (double)i / DotCount, // ⇦ use this to fade each consecutive dot
             };
 
@@ -592,6 +758,8 @@ public partial class Spinner : UserControl
             double scale = 1 + dist / (ActualWidth / 2);
             dot.Width = _rainSize[i] * scale;
             dot.Height = _rainSize[i] * scale;
+            
+            // Opacity increases with distance
             dot.Opacity = Math.Min(1.0, 0.4 + dist / (ActualWidth / 2));
 
             Canvas.SetLeft(dot, _rainX[i] - dot.Width / 2);
@@ -644,7 +812,7 @@ public partial class Spinner : UserControl
             _starY[i] = centerY;
             _starDirX[i] = Math.Cos(angle);
             _starDirY[i] = Math.Sin(angle);
-            _starSpeed[i] = 30 + Random.Shared.NextDouble() * 50;
+            _starSpeed[i] = LineBaseSpeed + Random.Shared.NextDouble() * 50;
             _starSize[i] = 1 + Random.Shared.NextDouble() * DotSize;
 
             var streak = new Line
@@ -654,14 +822,15 @@ public partial class Spinner : UserControl
                 StrokeThickness = _starSize[i]/4,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
-                Opacity = (double)i / DotCount // fade each consecutive
+                Opacity = (double)i / DotCount // opacity will be changed later during render
             };
 
             PART_Canvas.Children.Add(streak);
         }
     }
 
-    public double LineBaseSpeed { get; set; } = 50;
+    public double LineBaseSpeed { get; set; } = 100;
+    public bool LineLowOpacity { get; set; } = false; // for subtle backgrounds
     void OnLineRendering(object? sender, EventArgs e)
     {
         if (_starX == null || _starY == null) { return; }
@@ -693,7 +862,7 @@ public partial class Spinner : UserControl
             streak.Y1 = _starY[i] - _starDirY[i] * length;
 
             // Opacity increases with distance
-            streak.Opacity = Math.Min(1.0, 0.4 + dist / (ActualWidth / 2));
+            streak.Opacity = Math.Min(LineLowOpacity ? 0.2 : 0.9, 0.01 + dist / (ActualWidth / 2));
 
             // Re-spawn when out of bounds
             if (_starX[i] < -DotSize || _starX[i] > ActualWidth + DotSize ||
@@ -788,6 +957,8 @@ public partial class Spinner : UserControl
         }
     }
 
+    public bool BounceLowOpacity { get; set; } = false; // for subtle backgrounds
+
     double[] _dotX;
     double[] _dotY;
     double[] _dotVX;
@@ -818,7 +989,7 @@ public partial class Spinner : UserControl
             else
                 _dotSize[i] = DotSize;
 
-            // Random velocity between -BounceSpeed and +BounceSpeed px/sec
+            // Random velocity between -BounceSpeed and +BounceSpeed in px/sec
             _dotVX[i] = RandomSwing(BounceSpeed); // (Random.Shared.NextDouble() * 200 - 100);
             _dotVY[i] = RandomSwing(BounceSpeed); // (Random.Shared.NextDouble() * 200 - 100);
 
@@ -827,7 +998,7 @@ public partial class Spinner : UserControl
                 Width = _dotSize[i],
                 Height = _dotSize[i],
                 Fill = DotBrush,
-                Opacity = Random.Shared.NextDouble() + 0.09,
+                Opacity = BounceLowOpacity ? RandomLowOpacity() : Random.Shared.NextDouble() + 0.09,
             };
 
             Canvas.SetLeft(dot, _dotX[i]);
@@ -1065,6 +1236,62 @@ public partial class Spinner : UserControl
         _last = now;
         return dt;
     }
+
+
+    static double GetOpacityForIndex(int index, int totalCount)
+    {
+        if (totalCount <= 1) 
+            return 1d;
+
+        // Linear fade: 1.0 at index 0 → 0.1 at the last dot
+        double t = (double)index / (totalCount - 1);
+        double opacity = 1.0 - 0.9 * t;
+
+        return Math.Max(0.0, Math.Min(1.0, opacity));
+    }
+
+    static double GetOpacityExponetial(int index, int totalCount)
+    {
+        if (totalCount <= 1)
+            return 1d;
+
+        // Linear fade: 1.0 at index 0 → 0.1 at the last dot
+        double t = (double)index / (totalCount - 1);
+        double opacity = 1.0 - t * t;
+
+        return Math.Max(0.0, Math.Min(1.0, opacity));
+    }
+
+    static double GetOpacityLinear(int index, int totalCount)
+    {
+        double t = Normalize(index, totalCount);
+        return 1.0 - t; // straight line fade
+    }
+
+    static double GetOpacityEaseIn(int index, int totalCount)
+    {
+        double t = Normalize(index, totalCount);
+        return 1.0 - (t * t); // quadratic ease-in
+    }
+
+    static double GetOpacityEaseOut(int index, int totalCount)
+    {
+        double t = Normalize(index, totalCount);
+        return 1.0 - Math.Sqrt(t); // square root ease-out
+    }
+
+    static double GetOpacityEaseInOut(int index, int totalCount)
+    {
+        double t = Normalize(index, totalCount);
+        return 1.0 - (3 * t * t - 2 * t * t * t); // cubic smooth-step
+    }
+
+    static double Normalize(int index, int totalCount)
+    {
+        if (totalCount <= 1) { return 0; }
+        return (double)index / (totalCount - 1); // t in [0,1]
+    }
+
 
     #region [Random Helpers]
     /// <summary>

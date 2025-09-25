@@ -50,25 +50,34 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 BounceCollisions="False"
+                BounceLowOpacity="True"
                 BounceSpeed="50"
-                DotBrush="{StaticResource SnowBrushLinear}"
-                DotCount="80"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="120"
                 DotSize="10"
-                LineBaseSpeed="50"
+                LineBaseSpeed="150"
+                LineLowOpacity="True"
                 RenderMode="AnimatePositions"
-                RenderShape="Stripe"
+                RenderShape="Spiral"
                 SnowBaseSpeed="50"
-                StripeBaseSpeed="60"
+                SnowLowOpacity="True"
+                SpiralArmCount="2"
+                SpiralClockwise="False"
+                SpiralDotSpacing="5"
+                SpiralFadeOut="True"
+                SpiralRotationAngle="0.11"
+                SpiralTwistDensity="0.11"
+                StripeBaseSpeed="40"
                 StripeLowOpacity="True"
                 Visibility="{Binding IsAnimated, Mode=OneWay, Converter={StaticResource boolToVisibility}}"
                 WaveAmplitude="12"
                 WaveDuration="1.1"
                 WindAmplitude="1"
-                WindFrequency="0.1" />
+                WindFrequency="0.5" />
 
             <ctrl:AutoExpander
                 BorderThickness="0"
-                CollapseDelay="00:00:02.5"
+                CollapseDelay="00:00:03.0"
                 CollapseOnLeave="True"
                 ExpandDirection="Down"
                 IsExpanded="{Binding IsBusy, Mode=OneWay}"
@@ -77,7 +86,7 @@
                     <DockPanel VerticalAlignment="Stretch">
                         <!-- <Image Source="Images/info.png" Width="10" Height="10" DockPanel.Dock="Left" RenderOptions.BitmapScalingMode="Fant" /> -->
                         <TextBlock
-                            FontSize="14"
+                            FontSize="16"
                             Foreground="{StaticResource NormalBrush}"
                             Text="Commands" />
                     </DockPanel>
@@ -116,6 +125,7 @@
                         Text="Login"
                         ToolTip="Login" />
                     <ctrl:CandyButton
+                        ButtonColor="Gold"
                         IsEnabled="{Binding IsBusy, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, Converter={StaticResource boolToReverse}}"
                         MouseUp="CandyButton_MouseUp"
                         Style="{StaticResource cbSettings}"
@@ -129,6 +139,8 @@
                 Grid.Row="1"
                 Margin="-15,5,-15,0"
                 HorizontalAlignment="Center"
+                Background="#00111111"
+                MouseDown="Control_MouseDown"
                 Orientation="Horizontal">
                 <DockPanel Margin="10">
                     <!--#region [Filter TextBox]-->
