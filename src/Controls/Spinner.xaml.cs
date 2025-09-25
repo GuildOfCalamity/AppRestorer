@@ -34,6 +34,7 @@ public enum SpinnerRenderShape
     Line,      // for line warp animation
     Stripe,    // for exaggerated line animation
     Bounce,    // for dot bouncing animation
+    Square,    // for walking square animation
 }
 
 /// <summary>
@@ -104,6 +105,8 @@ public partial class Spinner : UserControl
             CreateBounce();
         else if (RenderShape == SpinnerRenderShape.Spiral)
             CreateSpiral();
+        else if (RenderShape == SpinnerRenderShape.Square)
+            CreateSquare();
         else
             CreateDots();
 
@@ -179,6 +182,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnWormRendering;
         else if (RenderShape == SpinnerRenderShape.Spiral)
             CompositionTarget.Rendering += OnSpiralRendering;
+        else if (RenderShape == SpinnerRenderShape.Square)
+            CompositionTarget.Rendering += OnSquareRendering;
         else
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -205,6 +210,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnWormRendering;
         else if (RenderShape == SpinnerRenderShape.Spiral)
             CompositionTarget.Rendering -= OnSpiralRendering;
+        else if (RenderShape == SpinnerRenderShape.Square)
+            CompositionTarget.Rendering -= OnSquareRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -404,6 +411,7 @@ public partial class Spinner : UserControl
             PART_Canvas.Children.Add(dot);
         }
     }
+
 
     public int SpiralArmCount { get; set; } = 1;
     public bool SpiralFadeOut { get; set; } = true;
@@ -1179,6 +1187,106 @@ public partial class Spinner : UserControl
         }
     }
 
+    void CreateSquare()
+    {
+        if (PART_Canvas == null)
+            return;
+
+        if (SpiralArmCount <= 0)
+            SpiralArmCount = 1;
+
+        PART_Canvas.Children.Clear();
+
+        // Create dots once
+        _dots = new Ellipse[DotCount];
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                Opacity = (double)i / (double)DotCount + 0.01 // fade each consecutive dot
+            };
+            _dots[i] = dot;
+            PART_Canvas.Children.Add(dot);
+        }
+    }
+
+    public double SquareStep { get; set; } = 2;
+    public bool SquareClockwise { get; set; } = true;
+    void OnSquareRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateSquare();
+            return;
+        }
+
+        int count = PART_Canvas.Children.Count;
+
+        double w = ActualWidth;
+        double h = ActualHeight;
+        if (w <= 0 || h <= 0) 
+            return;
+
+        double cx = w / 2;
+        double cy = h / 2;
+
+        // Pixels along perimeter (per frame)
+        if (SquareClockwise)
+            _angle += SquareStep;
+        else
+            _angle -= SquareStep; 
+
+        double perimeter = 2 * (w + h);
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            // Each dot is spaced evenly along the perimeter
+            double offset = (_angle + i * (perimeter / DotCount)) % perimeter;
+
+            double x;
+            double y;
+
+            // Walk along top edge → right edge → bottom → left
+            if (offset < w)
+            {
+                // Top edge (left → right)
+                x = offset;
+                y = 0;
+            }
+            else if (offset < w + h)
+            {
+                // Right edge (top → bottom)
+                x = w;
+                y = offset - w;
+            }
+            else if (offset < w + h + w)
+            {
+                // Bottom edge (right → left)
+                x = w - (offset - (w + h));
+                y = h;
+            }
+            else
+            {
+                // Left edge (bottom → top)
+                x = 0;
+                y = h - (offset - (w + h + w));
+            }
+
+            // Center dots on coordinates
+            var dot = _dots[i];
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+
+            // Fade with index
+            if (SquareClockwise)
+                dot.Opacity = GetOpacityEaseInOut(count - i, count);
+            else
+                dot.Opacity = GetOpacityEaseInOut(i, DotCount);
+        }
+    }
 
     double _bounceOffset = 0d;
     bool _bounceForward = true;
@@ -1237,7 +1345,7 @@ public partial class Spinner : UserControl
         return dt;
     }
 
-
+    #region [Opacity Helpers]
     static double GetOpacityForIndex(int index, int totalCount)
     {
         if (totalCount <= 1) 
@@ -1291,7 +1399,7 @@ public partial class Spinner : UserControl
         if (totalCount <= 1) { return 0; }
         return (double)index / (totalCount - 1); // t in [0,1]
     }
-
+    #endregion
 
     #region [Random Helpers]
     /// <summary>
