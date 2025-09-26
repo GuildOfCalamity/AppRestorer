@@ -58,7 +58,7 @@
                 LineBaseSpeed="150"
                 LineLowOpacity="True"
                 RenderMode="AnimatePositions"
-                RenderShape="Spiral"
+                RenderShape="Snow"
                 SnowBaseSpeed="50"
                 SnowLowOpacity="True"
                 SpiralArmCount="2"

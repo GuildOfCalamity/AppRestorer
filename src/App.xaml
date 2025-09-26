@@ -90,6 +90,22 @@
                     <GradientStop Offset="1.0" Color="#242424" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
+            <RadialGradientBrush x:Key="MeteorBrushRadial" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.6" Color="Yellow" />
+                    <GradientStop Offset="0.8" Color="DodgerBlue" />
+                    <GradientStop Offset="1.0" Color="#202020" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <LinearGradientBrush x:Key="MeteorBackgroundBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#000528" />
+                        <GradientStop Offset="1.0" Color="#000" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
             <LinearGradientBrush x:Key="SnowBrushLinear" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
@@ -171,6 +187,14 @@
                     <GradientStopCollection>
                         <GradientStop Offset="0.0" Color="#444" />
                         <GradientStop Offset="1.0" Color="#111" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="UberDarkBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#222" />
+                        <GradientStop Offset="1.0" Color="#000" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>

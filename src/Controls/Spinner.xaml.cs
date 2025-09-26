@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -35,18 +36,25 @@ public enum SpinnerRenderShape
     Stripe,    // for exaggerated line animation
     Bounce,    // for dot bouncing animation
     Square,    // for walking square animation
+    Rings,     // for concentric ring animation
+    Pulse,     // for ring pulse animation
+    Twinkle,   // for twinkling star animation
+    Meteor,    // for shooting star animation
+    Meteor2,   // for shooting star animation (with color palette)
 }
 
 /// <summary>
-/// If mode is set to <see cref="SpinnerRenderMode.RotateCanvas"/> then some of<br/>
-/// the more advanced animations will not render correctly, it's<br/>
-/// recommended to keep the mode set to <see cref="SpinnerRenderMode.AnimatePositions"/><br/>
-/// which employs the <see cref="CompositionTarget.Rendering"/> surface event.<br/>
-/// Visibility determines if animation runs.
+///   If mode is set to <see cref="SpinnerRenderMode.RotateCanvas"/> then some of<br/>
+///   the more advanced animations will not render correctly, it's<br/>
+///   recommended to keep the mode set to <see cref="SpinnerRenderMode.AnimatePositions"/><br/>
+///   which employs the <see cref="CompositionTarget.Rendering"/> surface event.<br/>
+///   Visibility determines if animation runs.
 /// </summary>
 /// <remarks>
-/// Most render methods have their own data elements, however some are shared,<br/>
-/// e.g. the Snow/Wind/Space modes all use the _rain arrays.<br/>
+///   Most render methods have their own data elements, however some are<br/>
+///   shared, e.g. the Snow/Wind/Space modes all use the _rain arrays.<br/>
+///   The opacity for each dot is currently set per-frame in the render<br/>
+///   phase, but this could be moved to the creation phase if desired.
 /// </remarks>
 public partial class Spinner : UserControl
 {
@@ -107,6 +115,16 @@ public partial class Spinner : UserControl
             CreateSpiral();
         else if (RenderShape == SpinnerRenderShape.Square)
             CreateSquare();
+        else if (RenderShape == SpinnerRenderShape.Rings)
+            CreateSpiral();
+        else if (RenderShape == SpinnerRenderShape.Pulse)
+            CreateSpiral();
+        else if (RenderShape == SpinnerRenderShape.Twinkle)
+            CreateTwinkle();
+        else if (RenderShape == SpinnerRenderShape.Meteor)
+            CreateMeteors();
+        else if (RenderShape == SpinnerRenderShape.Meteor2)
+            CreateMeteors2();
         else
             CreateDots();
 
@@ -184,7 +202,17 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnSpiralRendering;
         else if (RenderShape == SpinnerRenderShape.Square)
             CompositionTarget.Rendering += OnSquareRendering;
-        else
+        else if (RenderShape == SpinnerRenderShape.Rings)
+            CompositionTarget.Rendering += OnRingsRendering;
+        else if (RenderShape == SpinnerRenderShape.Pulse)
+            CompositionTarget.Rendering += OnPulseRendering;
+        else if (RenderShape == SpinnerRenderShape.Twinkle)
+            CompositionTarget.Rendering += OnTwinkleRendering;
+        else if (RenderShape == SpinnerRenderShape.Meteor)
+            CompositionTarget.Rendering += OnMeteorRendering;
+        else if (RenderShape == SpinnerRenderShape.Meteor2)
+            CompositionTarget.Rendering += OnMeteorRendering2;
+        else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
 
@@ -212,6 +240,16 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnSpiralRendering;
         else if (RenderShape == SpinnerRenderShape.Square)
             CompositionTarget.Rendering -= OnSquareRendering;
+        else if (RenderShape == SpinnerRenderShape.Rings)
+            CompositionTarget.Rendering -= OnRingsRendering;
+        else if (RenderShape == SpinnerRenderShape.Pulse)
+            CompositionTarget.Rendering -= OnPulseRendering;
+        else if (RenderShape == SpinnerRenderShape.Twinkle)
+            CompositionTarget.Rendering -= OnTwinkleRendering;
+        else if (RenderShape == SpinnerRenderShape.Meteor)
+            CompositionTarget.Rendering -= OnMeteorRendering;
+        else if (RenderShape == SpinnerRenderShape.Meteor2)
+            CompositionTarget.Rendering -= OnMeteorRendering2;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -396,8 +434,8 @@ public partial class Spinner : UserControl
 
         PART_Canvas.Children.Clear();
 
-        // Create dots once
         _dots = new Ellipse[DotCount];
+
         for (int i = 0; i < DotCount; i++)
         {
             var dot = new Ellipse
@@ -412,8 +450,9 @@ public partial class Spinner : UserControl
         }
     }
 
-
+ 
     public int SpiralArmCount { get; set; } = 1;
+    public bool SpiralLowOpacity { get; set; } = false;
     public bool SpiralFadeOut { get; set; } = true;
     public bool SpiralClockwise { get; set; } = false;
     public double SpiralDotSpacing { get; set; } = 5;
@@ -463,18 +502,22 @@ public partial class Spinner : UserControl
 
             var dot = _dots[i];
 
-            //var tmp = GetOpacityForIndex(count-i, count);
-            //Debug.WriteLine($"[INFO] Dot {i} value: {tmp}");
-
-            if (SpiralFadeOut)
+            if (SpiralLowOpacity)
             {
-                dot.Opacity = Math.Min(1.0, ((double)count - (double)i) * 0.1d); // fade from outside inward
-                dot.Opacity = GetOpacityEaseInOut(i, count); // fade from outside inward
+                dot.Opacity = RandomLowOpacity();
             }
             else
             {
-                dot.Opacity = ((double)i / count) + 0.01;   // fade from inside outward
-                dot.Opacity = GetOpacityEaseInOut(count - i, count);              // fade from outside inward
+                if (SpiralFadeOut)
+                {
+                    //dot.Opacity = Math.Min(1.0, ((double)count - (double)i) * 0.1d); // fade from outside inward
+                    dot.Opacity = GetOpacityEaseInOut(i, count); // fade from outside inward
+                }
+                else
+                {
+                    //dot.Opacity = ((double)i / count) + 0.01; // fade from inside outward
+                    dot.Opacity = GetOpacityEaseInOut(count - i, count); // fade from outside inward
+                }
             }
 
             Canvas.SetLeft(dot, x - dot.Width / 2);
@@ -507,8 +550,8 @@ public partial class Spinner : UserControl
             _angle += Tau;
 
         // Spiral parameters
-        double spacing = SpiralDotSpacing;   // radial spacing between dots
-        double twist = SpiralTwistDensity;   // how tightly the spiral winds
+        double spacing = SpiralDotSpacing; // radial spacing between dots
+        double twist = SpiralTwistDensity; // how tightly the spiral winds
 
         for (int i = 0; i < count; i++)
         {
@@ -1213,6 +1256,7 @@ public partial class Spinner : UserControl
         }
     }
 
+    public double SquareSize { get; set; } = 0; // fill available perimeter if zero
     public double SquareStep { get; set; } = 2;
     public bool SquareClockwise { get; set; } = true;
     void OnSquareRendering(object? sender, EventArgs e)
@@ -1225,8 +1269,25 @@ public partial class Spinner : UserControl
 
         int count = PART_Canvas.Children.Count;
 
-        double w = ActualWidth;
-        double h = ActualHeight;
+        double w = 0;
+        double h = 0;
+
+        // If SquareSize is zero, use the control's full available area
+        if (SquareSize == 0)
+        {
+            w = ActualWidth;
+            h = ActualHeight;
+        }
+        else
+        {
+            w = SquareSize;
+            h = SquareSize;
+        }
+
+        double left = (ActualWidth - w) / 2;
+        double top = (ActualHeight - h) / 2;
+
+        // Leave if the control lacks any area
         if (w <= 0 || h <= 0) 
             return;
 
@@ -1237,43 +1298,81 @@ public partial class Spinner : UserControl
         if (SquareClockwise)
             _angle += SquareStep;
         else
-            _angle -= SquareStep; 
+            _angle -= SquareStep;
 
-        double perimeter = 2 * (w + h);
+        double cornerRadius = 12; // radius of rounded corners
+        double straightTop = w - 2 * cornerRadius;
+        double straightRight = h - 2 * cornerRadius;
+        double straightBottom = straightTop;
+        double straightLeft = straightRight;
+        double arcLen = Math.PI / 4 * cornerRadius;
+        double perimeter = perimeter = 2 * (w + h);
 
-        for (int i = 0; i < DotCount; i++)
+        for (int i = 0; i < _dots.Length; i++)
         {
             // Each dot is spaced evenly along the perimeter
-            double offset = (_angle + i * (perimeter / DotCount)) % perimeter;
+            double offset = (_angle + i * (perimeter / count)) % perimeter;
 
-            double x;
-            double y;
+            // Ensure no negative values sneak in when walking counter‑clockwise
+            offset = (offset + perimeter) % perimeter;
 
+            double x = 0;
+            double y = 0;
+        
+            #region [Original method without the new SquareSize]
             // Walk along top edge → right edge → bottom → left
+            //if (offset < w)
+            //{
+            //    // Top edge (left → right)
+            //    x = offset;
+            //    y = 0;
+            //}
+            //else if (offset < w + h)
+            //{
+            //    // Right edge (top → bottom)
+            //    x = w;
+            //    y = offset - w;
+            //}
+            //else if (offset < w + h + w)
+            //{
+            //    // Bottom edge (right → left)
+            //    x = w - (offset - (w + h));
+            //    y = h;
+            //}
+            //else
+            //{
+            //    // Left edge (bottom → top)
+            //    x = 0;
+            //    y = h - (offset - (w + h + w));
+            //}
+            #endregion
+
+            #region [Using the new SquareSize, center it in the control]
             if (offset < w)
             {
                 // Top edge (left → right)
-                x = offset;
-                y = 0;
+                x = left + offset;
+                y = top;
             }
             else if (offset < w + h)
             {
                 // Right edge (top → bottom)
-                x = w;
-                y = offset - w;
+                x = left + w;
+                y = top + (offset - w);
             }
             else if (offset < w + h + w)
             {
                 // Bottom edge (right → left)
-                x = w - (offset - (w + h));
-                y = h;
+                x = left + w - (offset - (w + h));
+                y = top + h;
             }
             else
             {
                 // Left edge (bottom → top)
-                x = 0;
-                y = h - (offset - (w + h + w));
+                x = left;
+                y = top + h - (offset - (w + h + w));
             }
+            #endregion
 
             // Center dots on coordinates
             var dot = _dots[i];
@@ -1284,7 +1383,7 @@ public partial class Spinner : UserControl
             if (SquareClockwise)
                 dot.Opacity = GetOpacityEaseInOut(count - i, count);
             else
-                dot.Opacity = GetOpacityEaseInOut(i, DotCount);
+                dot.Opacity = GetOpacityEaseInOut(i, count);
         }
     }
 
@@ -1326,8 +1425,815 @@ public partial class Spinner : UserControl
         }
     }
 
+    public int RingsCount { get; set; } = 4;
+    public double RingsAngleSpeed { get; set; } = 2;
+    public bool RingsOutward { get; set; } = true;
+    public bool RingsAlternateOpacity { get; set; } = false;
+    public bool RingsLowOpacity { get; set; } = false; // for subtle backgrounds
+    void OnRingsRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateSpiral();
+            return;
+        }
+
+        int count = PART_Canvas.Children.Count;
+
+        double cx = ActualWidth / 2;
+        double cy = ActualHeight / 2;
+
+        // How far the rings can expand (to the smaller half dimension)
+        double maxRadius = Math.Min(ActualWidth, ActualHeight) / 2;
+
+
+        // Advance global phase
+        if (RingsOutward)
+            _angle += RingsAngleSpeed; // pixels per frame outward
+        else
+            _angle -= RingsAngleSpeed; // pixels per frame inward
+
+        if (_angle > maxRadius)
+            _angle -= maxRadius;
+        if (_angle < 0)
+            _angle += maxRadius;
+
+        // Determine number of concentric rings
+        int dotsPerRing = count / RingsCount;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            int ringIndex = i / dotsPerRing;
+            int dotIndex = i % dotsPerRing;
+            
+            // Each ring expands outward with a phase offset
+            double ringOffset = (ringIndex * (maxRadius / RingsCount));
+            double radius = (_angle + ringOffset) % maxRadius;
+            
+            // Evenly distribute dots around the circle
+            double theta = (Tau / dotsPerRing) * dotIndex;
+            
+            double x = cx + radius * Math.Cos(theta);
+            double y = cy + radius * Math.Sin(theta);
+            
+            var dot = _dots[i];
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+
+            if (RingsLowOpacity)
+            {
+                dot.Opacity = RandomLowOpacity();
+            }
+            else
+            {
+                if (RingsAlternateOpacity) // fade in cycles
+                    dot.Opacity = ((double)i / count) + 0.01;
+                else // Fade as radius grows (fades near edge)
+                    dot.Opacity = 1.0 - (radius / maxRadius);
+            }
+        }
+    }
+
+
+    public int PulseCount { get; set; } = 4;
+    public double PulseSpeed { get; set; } = 3; // radians per frame
+    public double PulseRadiusFactor { get; set; } = 2; // larger means smaller
+    public bool PulseAlternateOpacity { get; set; } = false;
+    public bool PulseLowOpacity { get; set; } = false; // for subtle backgrounds
+    void OnPulseRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateSpiral();
+            return;
+        }
+
+        int count = PART_Canvas.Children.Count;
+
+        // Determine center of control
+        double cx = ActualWidth / 2;
+        double cy = ActualHeight / 2;
+
+        // How far the rings can expand (to the smaller half dimension)
+        double maxRadius = Math.Min(ActualWidth, ActualHeight) / PulseRadiusFactor;
+
+        // Advance global phase
+        _angle += PulseSpeed / 100d;
+        if (_angle > Tau)
+            _angle -= Tau;
+        if (_angle < 0)
+            _angle += Tau;
+
+        int dotsPerRing = count / PulseCount;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            int ringIndex = i / dotsPerRing;
+            int dotIndex = i % dotsPerRing;
+
+            // Each ring has a phase offset so they don't all pulse in sync
+            double phase = _angle + (ringIndex * (Math.PI / PulseCount));
+
+            // Radius oscillates between 0 and maxRadius
+            double radius = (Math.Sin(phase) * 0.5 + 0.5) * maxRadius;
+
+            // Evenly distribute dots around the circle
+            double theta = (Tau / dotsPerRing) * dotIndex;
+
+            double x = cx + radius * Math.Cos(theta);
+            double y = cy + radius * Math.Sin(theta);
+
+            var dot = _dots[i];
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+
+            if (PulseLowOpacity)
+            {
+                dot.Opacity = RandomLowOpacity();
+            }
+            else
+            {
+                if (PulseAlternateOpacity) // fade in cycles
+                    dot.Opacity = ((double)i / count) + 0.01;
+                else // Fade as radius grows (fades near edge)
+                    dot.Opacity = 1.0 - (radius / maxRadius);
+            }
+        }
+    }
+
+
+    double[] _phases; // per-dot phase offsets
+    void CreateTwinkle()
+    {
+        if (PART_Canvas == null)
+            return;
+
+        PART_Canvas.Children.Clear();
+
+        _dots = new Ellipse[DotCount];
+        _phases = new double[DotCount];
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+            };
+
+            // Random position across control
+            double x = Random.Shared.NextDouble() * ActualWidth;
+            double y = Random.Shared.NextDouble() * ActualHeight;
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+
+            // Random phase so stars twinkle out of sync
+            _phases[i] = Random.Shared.NextDouble() * Tau;
+
+            _dots[i] = dot;
+            PART_Canvas.Children.Add(dot);
+        }
+    }
+
+    public double TwinkleSpeed { get; set; } = 5;
+    void OnTwinkleRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateTwinkle();
+            return;
+        }
+
+        double speed = TwinkleSpeed / 100d;
+        _angle += speed;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            // Each star's opacity oscillates between 0.2 and 1.0
+            double phase = _angle + _phases[i];
+            double pulse = (Math.Sin(phase) * 0.5 + 0.5); // 0 ⇨ 1
+            double opacity = 0.1 + 0.5 * pulse;
+            _dots[i].Opacity = opacity;
+        }
+    }
+
+
+    StarState[] _stars;
+    void CreateMeteors()
+    {
+        if (PART_Canvas == null)
+            return;
+
+        PART_Canvas.Children.Clear();
+
+        _dots = new Ellipse[DotCount];
+        _stars = new StarState[DotCount];
+        
+        int trailLength = MeteorTrailLength; // number of trail dots per shooting star
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+            };
+
+            // Random position across control
+            double x = Random.Shared.NextDouble() * ActualWidth;
+            double y = Random.Shared.NextDouble() * ActualHeight;
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+
+            _dots[i] = dot;
+            PART_Canvas.Children.Add(dot);
+
+            // Pre-allocate meteor trail
+            var trail = new Ellipse[trailLength];
+            for (int j = 0; j < trailLength; j++)
+            {
+                var td = new Ellipse
+                {
+                    Width = DotSize / MeteorTrailFactor,
+                    Height = DotSize / MeteorTrailFactor,
+                    Fill = new SolidColorBrush(MeteorTrailColor),
+                    Opacity = 0
+                };
+                trail[j] = td;
+                PART_Canvas.Children.Add(td);
+            }
+
+            // Add the star to the array
+            _stars[i] = new StarState
+            {
+                X = x,
+                Y = y,
+                Phase = Random.Shared.NextDouble() * Tau,
+                IsShooting = false,
+                TrailDots = trail
+            };
+
+        }
+    }
+
+    double lastFadePercent = 0.2; // start fading when life is below this percentage (20% by default)
+    public int MeteorTrailLength { get; set; } = 16;
+    public Color MeteorTrailColor { get; set; } = Colors.LightGray;
+    public double MeteorTrailFactor { get; set; } = 2;
+    public double MeteorSpeed { get; set; } = 5;
+    public bool MeteorSpread360 { get; set; } = false;
+    public double MeteorShootChance { get; set; } = 1; // 1% chance per frame
+    void OnMeteorRendering(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateMeteors();
+            return;
+        }
+
+        double speed = MeteorSpeed / 100d;
+        _angle += speed;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            var star = _stars[i];
+            var dot = _dots[i];
+
+            if (star.IsShooting)
+            {
+                // Update shooting position
+                star.ShootX += star.VX;
+                star.ShootY += star.VY;
+                star.Life--;
+
+                // Position head
+                Canvas.SetLeft(dot, star.ShootX - dot.Width / 2);
+                Canvas.SetTop(dot, star.ShootY - dot.Height / 2);
+
+                // Adjust opacity (fade out as life decreases)
+                double lifeRatio = (double)star.Life / star.InitialLife;
+                if (lifeRatio > lastFadePercent)
+                {
+                    dot.Opacity = 1.0; // full brightness
+                }
+                else
+                {
+                    double t = lifeRatio / lastFadePercent; // normalize last 20%
+                    dot.Opacity = t * t; // quadratic fade
+                }
+
+                // Update trail dots
+                for (int j = 0; j < star.TrailDots.Length; j++)
+                {
+                    double t = (double)j / star.TrailDots.Length; // 0 ⇨ 1 along trail
+                    double tx = star.ShootX - star.VX * j * 0.5;
+                    double ty = star.ShootY - star.VY * j * 0.5;
+
+                    var td = star.TrailDots[j];
+                    // fade along trail
+                    //td.Opacity = 0.8 * (1 - t);
+                    // fade along life span
+                    double fade = (lifeRatio > lastFadePercent ? 1.0 : (lifeRatio / lastFadePercent) * (lifeRatio / lastFadePercent));
+                    td.Opacity = (1 - t) * 0.8 * fade;
+
+                    double tTrail = (double)j / star.TrailDots.Length;
+                    Color trailColor = LerpColor(MeteorTrailColor, Colors.OrangeRed, tTrail);
+                    td.Fill = new SolidColorBrush(trailColor);
+
+                    Canvas.SetLeft(td, tx - td.Width / 2);
+                    Canvas.SetTop(td, ty - td.Height / 2);
+                }
+
+                if (star.Life <= 0)
+                {
+                    // Reset to static star
+                    star.IsShooting = false;
+                    star.X = Random.Shared.NextDouble() * ActualWidth;
+                    star.Y = Random.Shared.NextDouble() * ActualHeight;
+                    Canvas.SetLeft(dot, star.X - dot.Width / 2);
+                    Canvas.SetTop(dot, star.Y - dot.Height / 2);
+                    // Hide trail
+                    foreach (var td in star.TrailDots)
+                        td.Opacity = 0;
+                }
+            }
+            else
+            {
+                // Normal pulsing star
+                double phase = _angle + star.Phase;
+                double pulse = (Math.Sin(phase) * 0.5 + 0.5);
+                dot.Opacity = 0.1 + 0.7 * pulse;
+
+                Canvas.SetLeft(dot, star.X - dot.Width / 2);
+                Canvas.SetTop(dot, star.Y - dot.Height / 2);
+
+                // Random chance to trigger shooting star
+                if (Random.Shared.NextDouble() < (MeteorShootChance / 1000d)) // % chance per frame
+                {
+                    star.IsShooting = true;
+                    star.ShootX = star.X;
+                    star.ShootY = star.Y;
+
+                    #region [Determine shooting direction and speed]
+                    double angle = 0;
+                    if (MeteorSpread360)
+                    {
+                        angle = Random.Shared.NextDouble() * Tau; // Full 360° random angle
+                    }
+                    else
+                    {
+                        // Preferred direction (in radians)
+                        //double radiant = Math.PI / 4; // Example: right = 45°
+                        double radiant = Math.PI / 2; // Example: downward = 90°
+                        double spread = Math.PI / 6; // Spread around radiant (e.g. ±30° around the downward angle)
+                        angle = radiant + (Random.Shared.NextDouble() * 2 - 1) * spread; // Pick a random angle within that cone
+                    }
+
+                    double shootSpeed = MeteorSpeed + Random.Shared.NextDouble() * (MeteorSpeed * 2);
+                    star.VX = Math.Cos(angle) * shootSpeed;
+                    star.VY = Math.Sin(angle) * shootSpeed;
+                    // Static life span
+                    //star.Life = 60;
+                    // Compute life based on distance to edge
+                    star.Life = ComputeLife(star.ShootX, star.ShootY, star.VX, star.VY, ActualWidth, ActualHeight, margin: -20);
+                    star.InitialLife = star.Life;
+                    #endregion
+                }
+            }
+        }
+    }
+
+
+
+    StarStateWithColor[] _stars2;
+    void CreateMeteors2()
+    {
+        if (PART_Canvas == null)
+            return;
+
+        PART_Canvas.Children.Clear();
+
+        _dots = new Ellipse[DotCount];
+        _stars2 = new StarStateWithColor[DotCount];
+
+        int trailLength = MeteorTrailLength; // number of trail dots per shooting star
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+            };
+
+            // Random position across control
+            double x = Random.Shared.NextDouble() * ActualWidth;
+            double y = Random.Shared.NextDouble() * ActualHeight;
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+
+            _dots[i] = dot;
+            PART_Canvas.Children.Add(dot);
+
+            // Pre-allocate meteor trail
+            var trail = new Ellipse[trailLength];
+            for (int j = 0; j < trailLength; j++)
+            {
+                var td = new Ellipse
+                {
+                    Width = DotSize / MeteorTrailFactor,
+                    Height = DotSize / MeteorTrailFactor,
+                    Fill = new SolidColorBrush(MeteorTrailColor),
+                    Opacity = 0
+                };
+                trail[j] = td;
+                PART_Canvas.Children.Add(td);
+            }
+
+            // Add the star to the array
+            _stars2[i] = new StarStateWithColor
+            {
+                X = x,
+                Y = y,
+                Phase = Random.Shared.NextDouble() * Tau,
+                IsShooting = false,
+                TrailDots = trail
+            };
+
+        }
+    }
+
+    void OnMeteorRendering2(object? sender, EventArgs e)
+    {
+        if (_dots == null || _dots.Length == 0)
+        {
+            CreateMeteors2();
+            return;
+        }
+
+        double speed = MeteorSpeed / 100d;
+        _angle += speed;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            var star = _stars2[i];
+            var dot = _dots[i];
+
+            if (star.IsShooting)
+            {
+                // Update shooting position
+                star.ShootX += star.VX;
+                star.ShootY += star.VY;
+                star.Life--;
+
+                // Position head
+                Canvas.SetLeft(dot, star.ShootX - dot.Width / 2);
+                Canvas.SetTop(dot, star.ShootY - dot.Height / 2);
+
+                // Adjust opacity (fade out as life decreases)
+                double lifeRatio = (double)star.Life / star.InitialLife;
+                if (lifeRatio > lastFadePercent)
+                {
+                    dot.Opacity = 1.0; // full brightness
+                }
+                else
+                {
+                    double t = lifeRatio / lastFadePercent; // normalize last 20%
+                    dot.Opacity = t * t; // quadratic fade
+                }
+
+                // Color interpolation
+                Color currentColor;
+                if (lifeRatio > 0.5)
+                {
+                    double t = (lifeRatio - 0.5) / 0.5; // 1 → 0
+                    currentColor = LerpColor(star.MidColor, star.StartColor, t);
+                }
+                else
+                {
+                    double t = lifeRatio / 0.5; // 1 → 0
+                    currentColor = LerpColor(star.EndColor, star.MidColor, t);
+                }
+                //dot.Fill = new SolidColorBrush(currentColor);
+                dot.Fill = new RadialGradientBrush
+                {
+                    GradientOrigin = new Point(0.5, 0.5), // center
+                    Center = new Point(0.5, 0.5),
+                    RadiusX = 0.5,
+                    RadiusY = 0.5,
+                    GradientStops = new GradientStopCollection
+                    {
+                        new GradientStop(LerpColor(currentColor, Colors.White, 0.5), 0.0), // bright core
+                        new GradientStop(currentColor, 0.6),
+                        new GradientStop(LerpColor(currentColor, Colors.Black, 0.5), 0.8), // bright core
+                        new GradientStop(Color.FromArgb(90, currentColor.R, currentColor.G, currentColor.B), 1.0) // transparent edge
+                    }
+                };
+
+
+                // Update trail dots
+                for (int j = 0; j < star.TrailDots.Length; j++)
+                {
+                    double t = (double)j / star.TrailDots.Length; // 0 ⇨ 1 along trail
+                    double tx = star.ShootX - star.VX * j * 0.5;
+                    double ty = star.ShootY - star.VY * j * 0.5;
+
+                    var td = star.TrailDots[j];
+                    // fade along trail
+                    //td.Opacity = 0.8 * (1 - t);
+                    // fade along life span
+                    double fade = (lifeRatio > lastFadePercent ? 1.0 : (lifeRatio / lastFadePercent) * (lifeRatio / lastFadePercent));
+                    td.Opacity = (1 - t) * 0.8 * fade;
+
+                    double tTrail = (double)j / star.TrailDots.Length;
+                    Color trailColor = LerpColor(currentColor, star.EndColor, tTrail);
+                    //td.Fill = CreateGradientBrush(currentColor, trailColor);
+                    td.Fill = new SolidColorBrush(trailColor);
+
+                    Canvas.SetLeft(td, tx - td.Width / 2);
+                    Canvas.SetTop(td, ty - td.Height / 2);
+                }
+
+                if (star.Life <= 0)
+                {
+                    // Reset to static star
+                    star.IsShooting = false;
+                    star.X = Random.Shared.NextDouble() * ActualWidth;
+                    star.Y = Random.Shared.NextDouble() * ActualHeight;
+                    Canvas.SetLeft(dot, star.X - dot.Width / 2);
+                    Canvas.SetTop(dot, star.Y - dot.Height / 2);
+                    // Hide trail
+                    foreach (var td in star.TrailDots)
+                        td.Opacity = 0;
+                }
+            }
+            else
+            {
+                // Normal pulsing star
+                double phase = _angle + star.Phase;
+                double pulse = (Math.Sin(phase) * 0.5 + 0.5);
+                dot.Opacity = 0.1 + 0.7 * pulse;
+
+                Canvas.SetLeft(dot, star.X - dot.Width / 2);
+                Canvas.SetTop(dot, star.Y - dot.Height / 2);
+
+                // Random chance to trigger shooting star
+                if (Random.Shared.NextDouble() < (MeteorShootChance / 1000d)) // % chance per frame
+                {
+                    star.IsShooting = true;
+                    star.ShootX = star.X;
+                    star.ShootY = star.Y;
+
+                    #region [Determine shooting direction and speed]
+                    double angle = 0;
+                    if (MeteorSpread360)
+                    {
+                        angle = Random.Shared.NextDouble() * Tau; // Full 360° random angle
+                    }
+                    else
+                    {
+                        // Preferred direction (in radians)
+                        //double radiant = Math.PI / 4; // Example: right = 45°
+                        double radiant = Math.PI / 2; // Example: downward = 90°
+                        double spread = Math.PI / 6; // Spread around radiant (e.g. ±30° around the downward angle)
+                        angle = radiant + (Random.Shared.NextDouble() * 2 - 1) * spread; // Pick a random angle within that cone
+                    }
+
+                    double shootSpeed = MeteorSpeed + Random.Shared.NextDouble() * (MeteorSpeed * 2);
+                    star.VX = Math.Cos(angle) * shootSpeed;
+                    star.VY = Math.Sin(angle) * shootSpeed;
+                    // Static life span
+                    //star.Life = 60;
+                    // Compute life based on distance to edge
+                    star.Life = ComputeLife(star.ShootX, star.ShootY, star.VX, star.VY, ActualWidth, ActualHeight, margin: -20);
+                    star.InitialLife = star.Life;
+                    #endregion
+
+                    // Random palette
+                    int palette = Random.Shared.Next(3);
+                    switch (palette)
+                    {
+                        case 0: // Bluish-white
+                            star.StartColor = Colors.White;
+                            star.MidColor = Colors.LightBlue;
+                            star.EndColor = Colors.DeepSkyBlue;
+                            break;
+                        case 1: // Golden
+                            star.StartColor = Colors.White;
+                            star.MidColor = Colors.Gold;
+                            star.EndColor = Colors.Orange;
+                            break;
+                        case 2: // Reddish
+                            star.StartColor = Colors.White;
+                            star.MidColor = Colors.Orange;
+                            star.EndColor = Colors.Red;
+                            break;
+                    }
+                }
+            }
+        }
+
+    }
+
+
+
+
+    /// <summary>
+    /// Computes star life based on distance to control's edge.<br/>
+    /// The lifetime of a shooting star should be proportional to how far it has to travel before leaving the control bounds.<br/>
+    /// </summary>
+    /// <param name="startX"><see cref="StarState.ShootX"/></param>
+    /// <param name="startY"><see cref="StarState.ShootY"/></param>
+    /// <param name="vx"><see cref="StarState.VX"/></param>
+    /// <param name="vy"><see cref="StarState.VY"/></param>
+    /// <param name="width">ActualWidth</param>
+    /// <param name="height">ActualHeight</param>
+    /// <returns>life remaining as <see cref="int"/></returns>
+    static int ComputeLife(double startX, double startY, double vx, double vy, double width, double height)
+    {
+        double maxT = double.MaxValue;
+
+        // Right edge
+        if (vx > 0)
+            maxT = Math.Min(maxT, (width - startX) / vx);
+        else if (vx < 0)
+            maxT = Math.Min(maxT, (0 - startX) / vx);
+
+        // Bottom edge
+        if (vy > 0)
+            maxT = Math.Min(maxT, (height - startY) / vy);
+        else if (vy < 0)
+            maxT = Math.Min(maxT, (0 - startY) / vy);
+
+        // Distance to edge
+        double distance = maxT * Math.Sqrt(vx * vx + vy * vy);
+
+        // Convert to frames (assuming 60fps, 1 unit per pixel per frame)
+        return (int)(distance / Math.Sqrt(vx * vx + vy * vy));
+    }
+
+    /// <summary>
+    /// Add a margin buffer so shooting stars fade out gracefully before they hit the control’s edge.<br/>
+    /// This way, they won’t just pop off‑screen, but instead taper away naturally.<br/>
+    /// </summary>
+    /// <param name="startX"><see cref="StarState.ShootX"/></param>
+    /// <param name="startY"><see cref="StarState.ShootY"/></param>
+    /// <param name="vx"><see cref="StarState.VX"/></param>
+    /// <param name="vy"><see cref="StarState.VY"/></param>
+    /// <param name="width">ActualWidth</param>
+    /// <param name="height">ActualHeight</param>
+    /// <param name="margin">negative values will allow extension outside control bounds, positive values for inside control bounds</param>
+    /// <returns>life remaining as <see cref="int"/></returns>
+    static int ComputeLife(double startX, double startY, double vx, double vy, double width, double height, double margin = 20)
+    {
+        double maxT = double.MaxValue;
+
+        // Right edge
+        if (vx > 0)
+            maxT = Math.Min(maxT, (width - margin - startX) / vx);
+        else if (vx < 0)
+            maxT = Math.Min(maxT, (margin - startX) / vx);
+
+        // Bottom edge
+        if (vy > 0)
+            maxT = Math.Min(maxT, (height - margin - startY) / vy);
+        else if (vy < 0)
+            maxT = Math.Min(maxT, (margin - startY) / vy);
+
+        // Distance to edge (minus margin)
+        double distance = maxT * Math.Sqrt(vx * vx + vy * vy);
+
+        // Convert to frames (1 unit per pixel per frame)
+        return Math.Max(1, (int)(distance / Math.Sqrt(vx * vx + vy * vy)));
+    }
+
+    static Color LerpColor(Color from, Color to, double t)
+    {
+        return Color.FromArgb(
+            (byte)(from.A + (to.A - from.A) * t),
+            (byte)(from.R + (to.R - from.R) * t),
+            (byte)(from.G + (to.G - from.G) * t),
+            (byte)(from.B + (to.B - from.B) * t));
+    }
+
+    /// <summary><code>
+    ///   var brighter = Brighten(baseColor, 1.5); // 50% brighter
+    /// </code></summary>
+    static Color Brighten(Color color, double factor)
+    {
+        // Ensure factor is >= 1.0 for brightening
+        if (factor < 1.0) factor = 1.0;
+
+        byte r = (byte)Math.Min(255, color.R * factor);
+        byte g = (byte)Math.Min(255, color.G * factor);
+        byte b = (byte)Math.Min(255, color.B * factor);
+
+        return Color.FromArgb(color.A, r, g, b);
+    }
+
+    /// <summary>
+    /// Gamma‑corrected brighten (perceptually smoother)
+    /// <code>
+    ///   var brighter = BrightenGamma(baseColor, 1.5); // 50% brighter
+    /// </code>
+    /// </summary>
+    static Color BrightenGamma(Color color, double factor = 1.5, double gamma = 2.2)
+    {
+        // Convert sRGB → linear
+        double r = Math.Pow(color.R / 255.0, gamma);
+        double g = Math.Pow(color.G / 255.0, gamma);
+        double b = Math.Pow(color.B / 255.0, gamma);
+
+        // Apply brighten factor in linear space
+        r = Math.Min(1.0, r * factor);
+        g = Math.Min(1.0, g * factor);
+        b = Math.Min(1.0, b * factor);
+
+        // Convert back linear → sRGB
+        byte R = (byte)(Math.Pow(r, 1.0 / gamma) * 255);
+        byte G = (byte)(Math.Pow(g, 1.0 / gamma) * 255);
+        byte B = (byte)(Math.Pow(b, 1.0 / gamma) * 255);
+
+        return Color.FromArgb(color.A, R, G, B);
+    }
+
+    /// <summary>
+    /// Gamma‑corrected darken (perceptually smoother)
+    /// <code>
+    ///   var darker = DarkenGamma(baseColor, 0.7); // Darken to 70% brightness
+    /// </code>
+    /// </summary>
+    static Color DarkenGamma(Color color, double factor = 0.7, double gamma = 2.2)
+    {
+        // factor < 1.0 will darken, factor = 1.0 no change
+        if (factor > 1.0) factor = 1.0;
+        if (factor < 0.0) factor = 0.0;
+
+        // Convert sRGB → linear
+        double r = Math.Pow(color.R / 255.0, gamma);
+        double g = Math.Pow(color.G / 255.0, gamma);
+        double b = Math.Pow(color.B / 255.0, gamma);
+
+        // Apply darken factor in linear space
+        r *= factor;
+        g *= factor;
+        b *= factor;
+
+        // Convert back linear → sRGB
+        byte R = (byte)(Math.Pow(r, 1.0 / gamma) * 255);
+        byte G = (byte)(Math.Pow(g, 1.0 / gamma) * 255);
+        byte B = (byte)(Math.Pow(b, 1.0 / gamma) * 255);
+
+        return Color.FromArgb(color.A, R, G, B);
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="LinearGradientBrush"/> using two <see cref="System.Windows.Media.Color"/>s.
+    /// </summary>
+    /// <returns><see cref="LinearGradientBrush"/></returns>
+    static LinearGradientBrush CreateGradientBrush(Color c1, Color c2)
+    {
+        var gs1 = new GradientStop(c1, 0);
+        var gs3 = new GradientStop(c2, 1);
+        var gsc = new GradientStopCollection { gs1, gs3 };
+        var lgb = new LinearGradientBrush
+        {
+            ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation,
+            StartPoint = new System.Windows.Point(0, 0),
+            EndPoint = new System.Windows.Point(0, 1),
+            GradientStops = gsc
+        };
+        return lgb;
+    }
+
+    /// <summary>
+    /// Generates a random <see cref="LinearGradientBrush"/> using three <see cref="System.Windows.Media.Color"/>s.
+    /// </summary>
+    /// <returns><see cref="LinearGradientBrush"/></returns>
+    static LinearGradientBrush CreateGradientBrush(Color c1, Color c2, Color c3)
+    {
+        var gs1 = new GradientStop(c1, 0);
+        var gs2 = new GradientStop(c2, 0.5);
+        var gs3 = new GradientStop(c3, 1);
+        var gsc = new GradientStopCollection { gs1, gs2, gs3 };
+        var lgb = new LinearGradientBrush
+        {
+            ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation,
+            StartPoint = new System.Windows.Point(0, 0),
+            EndPoint = new System.Windows.Point(0, 1),
+            GradientStops = gsc
+        };
+        return lgb;
+    }
     #endregion
 
+    #region [Delta Calc]
     DateTime _last = DateTime.MinValue;
     /// <summary>
     /// A simple delta-time tracker.
@@ -1344,6 +2250,7 @@ public partial class Spinner : UserControl
         _last = now;
         return dt;
     }
+    #endregion
 
     #region [Opacity Helpers]
     static double GetOpacityForIndex(int index, int totalCount)
@@ -1423,11 +2330,11 @@ public partial class Spinner : UserControl
     }
 
     /// <summary>
-    /// Returns a random opacity value between 0.1 and 0.41 (inclusive of 0.1, exclusive of 0.41).
+    /// Returns a random opacity value between 0.1 and 0.4 (inclusive of 0.1, exclusive of 0.4).
     /// </summary>
     static double RandomLowOpacity()
     {
-        return 0.1 + Random.Shared.NextDouble() * (0.41 - 0.1);
+        return 0.1 + Random.Shared.NextDouble() * (0.4 - 0.1);
     }
 
     /// <summary>
@@ -1506,3 +2413,38 @@ public partial class Spinner : UserControl
     }
     #endregion
 }
+
+#region [Support Classes]
+/// <summary>
+/// For "shooting stars" simulation.
+/// </summary>
+class StarState
+{
+    public double X, Y;          // static position
+    public double Phase;         // twinkle phase
+    public bool IsShooting;      // shooting star flag
+    public double ShootX, ShootY;// current shooting position
+    public double VX, VY;        // velocity
+    public int Life;             // frames remaining in shooting
+    public int InitialLife;      // for fade curve
+    public Ellipse[] TrailDots;  // pre-allocated trail ellipses
+}
+
+
+class StarStateWithColor
+{
+    public double X, Y;
+    public double Phase;
+    public bool IsShooting;
+    public double ShootX, ShootY;
+    public double VX, VY;
+    public int Life;
+    public int InitialLife;
+    public Ellipse[] TrailDots;  // pre-allocated trail ellipses
+
+    // Color palette
+    public Color StartColor;
+    public Color MidColor;
+    public Color EndColor;
+}
+#endregion

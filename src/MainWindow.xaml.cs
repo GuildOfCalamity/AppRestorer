@@ -159,6 +159,7 @@ public partial class MainWindow : Window
             Height = 20
         };
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Settings", Command = _vm!.MenuCommand, Icon = MenuIconFactory.CreateRandom() });
+        _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Testing", Command = _vm!.TestCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Debug", Command = _vm!.DebugCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Listing", Command = _vm!.AnalyzeCommand, Icon = MenuIconFactory.CreateRandom() });
         _menu.Items.Add(new MenuItem { FontSize = 15d, Header = "Minimize", Command = _vm!.MinimizeCommand, Icon = MenuIconFactory.Create("Download", null, Extensions.CreateRandomLightBrush(ColorTilt.Green)) });
@@ -580,6 +581,19 @@ public partial class MainWindow : Window
                     Radius = 5
                 };
                 settings.ShowDialog();
+                this.Effect = null;
+            }
+            else if ($"{e.Payload}".StartsWith("[TESTING]"))
+            {
+                var test = new TestingWindow();
+                test.Owner = this;
+                test.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                this.Effect = new System.Windows.Media.Effects.BlurEffect()
+                {
+                    KernelType = System.Windows.Media.Effects.KernelType.Gaussian,
+                    Radius = 5
+                };
+                test.ShowDialog();
                 this.Effect = null;
             }
             else if ($"{e.Payload}".StartsWith("[TIME]"))

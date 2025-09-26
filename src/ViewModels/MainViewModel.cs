@@ -159,6 +159,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CloseCommand { get; set; }
     public ICommand DebugCommand { get; set; }
     public ICommand MenuCommand { get; set; }
+    public ICommand TestCommand { get; set; }
     public ICommand AnalyzeCommand { get; set; }
     #endregion
 
@@ -182,10 +183,8 @@ public class MainViewModel : INotifyPropertyChanged
             BinderBrush1 = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256)));
             BinderBrush2 = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb((byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256), (byte)Random.Shared.Next(256)));
         });
-        MenuCommand = new RelayCommand(() => 
-        { 
-            App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[SETTINGS]"); 
-        });
+        MenuCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[SETTINGS]"); });
+        TestCommand = new RelayCommand(() => { App.RootEventBus?.Publish(Constants.EB_ToWindow, $"[TESTING]"); });
         AnalyzeCommand = new RelayCommand(async () => 
         {
             IsBusy = !IsBusy;
