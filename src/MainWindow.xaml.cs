@@ -585,6 +585,7 @@ public partial class MainWindow : Window
             }
             else if ($"{e.Payload}".StartsWith("[TESTING]"))
             {
+                _vm!.IsAnimated = false;
                 var test = new TestingWindow();
                 test.Owner = this;
                 test.WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -595,6 +596,7 @@ public partial class MainWindow : Window
                 };
                 test.ShowDialog();
                 this.Effect = null;
+                _vm!.IsAnimated = true;
             }
             else if ($"{e.Payload}".StartsWith("[TIME]"))
             {

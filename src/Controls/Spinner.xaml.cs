@@ -1687,6 +1687,7 @@ public partial class Spinner : UserControl
     public double MeteorSpeed { get; set; } = 5;
     public bool MeteorSpread360 { get; set; } = false;
     public double MeteorShootChance { get; set; } = 1; // 1% chance per frame
+    public bool MeteorReduceLoad { get; set; } = true;
     void OnMeteorRendering(object? sender, EventArgs e)
     {
         if (_dots == null || _dots.Length == 0)
@@ -1700,6 +1701,9 @@ public partial class Spinner : UserControl
 
         for (int i = 0; i < _dots.Length; i++)
         {
+            if (MeteorReduceLoad && i % 4 == 0)
+                Thread.Sleep(1); // reduce CPU usage
+
             var star = _stars[i];
             var dot = _dots[i];
 
@@ -1807,8 +1811,6 @@ public partial class Spinner : UserControl
         }
     }
 
-
-
     StarStateWithColor[] _stars2;
     void CreateMeteors2()
     {
@@ -1882,6 +1884,9 @@ public partial class Spinner : UserControl
 
         for (int i = 0; i < _dots.Length; i++)
         {
+            if (MeteorReduceLoad && i % 4 == 0)
+                Thread.Sleep(1); // reduce CPU usage
+
             var star = _stars2[i];
             var dot = _dots[i];
 
@@ -1931,11 +1936,10 @@ public partial class Spinner : UserControl
                     {
                         new GradientStop(LerpColor(currentColor, Colors.White, 0.5), 0.0), // bright core
                         new GradientStop(currentColor, 0.6),
-                        new GradientStop(LerpColor(currentColor, Colors.Black, 0.5), 0.8), // bright core
+                        new GradientStop(LerpColor(currentColor, Colors.Black, 0.5), 0.8), // dark outer
                         new GradientStop(Color.FromArgb(90, currentColor.R, currentColor.G, currentColor.B), 1.0) // transparent edge
                     }
                 };
-
 
                 // Update trail dots
                 for (int j = 0; j < star.TrailDots.Length; j++)
@@ -2038,11 +2042,7 @@ public partial class Spinner : UserControl
                 }
             }
         }
-
     }
-
-
-
 
     /// <summary>
     /// Computes star life based on distance to control's edge.<br/>
