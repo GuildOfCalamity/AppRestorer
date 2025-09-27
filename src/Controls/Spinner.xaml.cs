@@ -39,8 +39,8 @@ public enum SpinnerRenderShape
     Rings,     // for concentric ring animation
     Pulse,     // for ring pulse animation
     Twinkle,   // for twinkling star animation
-    Meteor,    // for shooting star animation
-    Meteor2,   // for shooting star animation (with color palette)
+    Meteor1,   // for shooting star animation
+    Meteor2,   // for shooting star animation (with enhanced color palette)
 }
 
 /// <summary>
@@ -111,18 +111,14 @@ public partial class Spinner : UserControl
             CreateStripe();
         else if (RenderShape == SpinnerRenderShape.Bounce)
             CreateBounce();
-        else if (RenderShape == SpinnerRenderShape.Spiral)
+        else if (RenderShape == SpinnerRenderShape.Spiral || RenderShape == SpinnerRenderShape.Pulse || RenderShape == SpinnerRenderShape.Rings)
             CreateSpiral();
         else if (RenderShape == SpinnerRenderShape.Square)
             CreateSquare();
-        else if (RenderShape == SpinnerRenderShape.Rings)
-            CreateSpiral();
-        else if (RenderShape == SpinnerRenderShape.Pulse)
-            CreateSpiral();
         else if (RenderShape == SpinnerRenderShape.Twinkle)
             CreateTwinkle();
-        else if (RenderShape == SpinnerRenderShape.Meteor)
-            CreateMeteors();
+        else if (RenderShape == SpinnerRenderShape.Meteor1)
+            CreateMeteors1();
         else if (RenderShape == SpinnerRenderShape.Meteor2)
             CreateMeteors2();
         else
@@ -208,8 +204,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnPulseRendering;
         else if (RenderShape == SpinnerRenderShape.Twinkle)
             CompositionTarget.Rendering += OnTwinkleRendering;
-        else if (RenderShape == SpinnerRenderShape.Meteor)
-            CompositionTarget.Rendering += OnMeteorRendering;
+        else if (RenderShape == SpinnerRenderShape.Meteor1)
+            CompositionTarget.Rendering += OnMeteorRendering1;
         else if (RenderShape == SpinnerRenderShape.Meteor2)
             CompositionTarget.Rendering += OnMeteorRendering2;
         else // default is basic spinner circle
@@ -246,8 +242,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnPulseRendering;
         else if (RenderShape == SpinnerRenderShape.Twinkle)
             CompositionTarget.Rendering -= OnTwinkleRendering;
-        else if (RenderShape == SpinnerRenderShape.Meteor)
-            CompositionTarget.Rendering -= OnMeteorRendering;
+        else if (RenderShape == SpinnerRenderShape.Meteor1)
+            CompositionTarget.Rendering -= OnMeteorRendering1;
         else if (RenderShape == SpinnerRenderShape.Meteor2)
             CompositionTarget.Rendering -= OnMeteorRendering2;
         else
@@ -422,7 +418,6 @@ public partial class Spinner : UserControl
     }
 
 
-
     Ellipse[] _dots;
     void CreateSpiral()
     {
@@ -573,12 +568,10 @@ public partial class Spinner : UserControl
         }
     }
 
-
     public double SpiralGrowthRate { get; set; } = 8;     // pixels/sec
     public double SpiralMaxRadius { get; set; } = 40;     // px
     public double SpiralAngularSpeed { get; set; } = 90;  // deg/sec
     public double SpiralInOutSpeed { get; set; } = 0.75;  // cycles/sec
-
 
     void OnSpiralRenderingOld(object? sender, EventArgs e)
     {
@@ -707,7 +700,11 @@ public partial class Spinner : UserControl
 
     void OnSnowRendering(object? sender, EventArgs e)
     {
-        if (_rainX == null || _rainY == null) { return; }
+        if (_rainX == null || _rainY == null) 
+        {
+            CreateSnow();
+            return; 
+        }
 
         double dt = GetDeltaSeconds();
 
@@ -743,7 +740,11 @@ public partial class Spinner : UserControl
 
     void OnWindRendering(object? sender, EventArgs e)
     {
-        if (_rainX == null || _rainY == null) { return; }
+        if (_rainX == null || _rainY == null)
+        {
+            CreateSnow();
+            return; 
+        }
 
         double dt = GetDeltaSeconds();
 
@@ -780,7 +781,11 @@ public partial class Spinner : UserControl
 
     void OnStarfieldRendering(object? sender, EventArgs e)
     {
-        if (_rainX == null || _rainY == null) { return; }
+        if (_rainX == null || _rainY == null) 
+        {
+            CreateSnow();
+            return; 
+        }
 
         double dt = GetDeltaSeconds();
         double centerX = ActualWidth / 2;
@@ -985,7 +990,11 @@ public partial class Spinner : UserControl
 
     void OnStripeRendering(object? sender, EventArgs e)
     {
-        if (_starX == null || _starY == null) { return; }
+        if (_starX == null || _starY == null) 
+        {
+            CreateStripe();
+            return; 
+        }
 
         double dt = GetDeltaSeconds();
 
@@ -1063,7 +1072,11 @@ public partial class Spinner : UserControl
     public double BounceSpeed { get; set; } = 80;
     void OnBounceRendering(object? sender, EventArgs e)
     {
-        if (_dotX == null || _dotY == null) { return; }
+        if (_dotX == null || _dotY == null)
+        {
+            CreateBounce();
+            return; 
+        }
 
         // Restitution coefficient (0 to 1) makes collisions less bouncy.
         // Any values less than 1 will slowly absorb energy from the system
@@ -1320,28 +1333,28 @@ public partial class Spinner : UserControl
             double y = 0;
         
             #region [Original method without the new SquareSize]
-            // Walk along top edge → right edge → bottom → left
+            // Walk along top edge ⇨ right edge ⇨ bottom ⇨ left
             //if (offset < w)
             //{
-            //    // Top edge (left → right)
+            //    // Top edge (left ⇨ right)
             //    x = offset;
             //    y = 0;
             //}
             //else if (offset < w + h)
             //{
-            //    // Right edge (top → bottom)
+            //    // Right edge (top ⇨ bottom)
             //    x = w;
             //    y = offset - w;
             //}
             //else if (offset < w + h + w)
             //{
-            //    // Bottom edge (right → left)
+            //    // Bottom edge (right ⇨ left)
             //    x = w - (offset - (w + h));
             //    y = h;
             //}
             //else
             //{
-            //    // Left edge (bottom → top)
+            //    // Left edge (bottom ⇨ top)
             //    x = 0;
             //    y = h - (offset - (w + h + w));
             //}
@@ -1350,25 +1363,25 @@ public partial class Spinner : UserControl
             #region [Using the new SquareSize, center it in the control]
             if (offset < w)
             {
-                // Top edge (left → right)
+                // Top edge (left ⇨ right)
                 x = left + offset;
                 y = top;
             }
             else if (offset < w + h)
             {
-                // Right edge (top → bottom)
+                // Right edge (top ⇨ bottom)
                 x = left + w;
                 y = top + (offset - w);
             }
             else if (offset < w + h + w)
             {
-                // Bottom edge (right → left)
+                // Bottom edge (right ⇨ left)
                 x = left + w - (offset - (w + h));
                 y = top + h;
             }
             else
             {
-                // Left edge (bottom → top)
+                // Left edge (bottom ⇨ top)
                 x = left;
                 y = top + h - (offset - (w + h + w));
             }
@@ -1621,7 +1634,7 @@ public partial class Spinner : UserControl
 
 
     StarState[] _stars;
-    void CreateMeteors()
+    void CreateMeteors1()
     {
         if (PART_Canvas == null)
             return;
@@ -1683,25 +1696,27 @@ public partial class Spinner : UserControl
     double lastFadePercent = 0.2; // start fading when life is below this percentage (20% by default)
     public int MeteorTrailLength { get; set; } = 16;
     public Color MeteorTrailColor { get; set; } = Colors.LightGray;
-    public double MeteorTrailFactor { get; set; } = 2;
+    public double MeteorTrailFactor { get; set; } = 2; // size reduction factor for trail dots
     public double MeteorSpeed { get; set; } = 5;
+    public double MeteorSpreadAngle { get; set; } = 30;
     public bool MeteorSpread360 { get; set; } = false;
     public double MeteorShootChance { get; set; } = 1; // 1% chance per frame
     public bool MeteorReduceLoad { get; set; } = true;
-    void OnMeteorRendering(object? sender, EventArgs e)
+    void OnMeteorRendering1(object? sender, EventArgs e)
     {
         if (_dots == null || _dots.Length == 0)
         {
-            CreateMeteors();
+            CreateMeteors1();
             return;
         }
 
-        double speed = MeteorSpeed / 100d;
+        // With the reduced load option we'll double the speed.
+        double speed = MeteorReduceLoad ? (MeteorSpeed * 2) / 100d : MeteorSpeed / 100d;
         _angle += speed;
 
         for (int i = 0; i < _dots.Length; i++)
         {
-            if (MeteorReduceLoad && i % 4 == 0)
+            if (MeteorReduceLoad && i % 2 == 0)
                 Thread.Sleep(1); // reduce CPU usage
 
             var star = _stars[i];
@@ -1745,6 +1760,7 @@ public partial class Spinner : UserControl
                     td.Opacity = (1 - t) * 0.8 * fade;
 
                     double tTrail = (double)j / star.TrailDots.Length;
+                    // Shift to reddish-orange along the trail
                     Color trailColor = LerpColor(MeteorTrailColor, Colors.OrangeRed, tTrail);
                     td.Fill = new SolidColorBrush(trailColor);
 
@@ -1793,7 +1809,8 @@ public partial class Spinner : UserControl
                         // Preferred direction (in radians)
                         //double radiant = Math.PI / 4; // Example: right = 45°
                         double radiant = Math.PI / 2; // Example: downward = 90°
-                        double spread = Math.PI / 6; // Spread around radiant (e.g. ±30° around the downward angle)
+                        //double spread = Math.PI / 6; // Spread around radiant (e.g. ±30° around the downward angle)
+                        double spread = SpreadFromDegrees(MeteorSpreadAngle); // convert degrees to radians
                         angle = radiant + (Random.Shared.NextDouble() * 2 - 1) * spread; // Pick a random angle within that cone
                     }
 
@@ -1879,12 +1896,13 @@ public partial class Spinner : UserControl
             return;
         }
 
-        double speed = MeteorSpeed / 100d;
+        // With the reduced load option we'll double the speed.
+        double speed = MeteorReduceLoad ? (MeteorSpeed * 2) / 100d : MeteorSpeed / 100d;
         _angle += speed;
 
         for (int i = 0; i < _dots.Length; i++)
         {
-            if (MeteorReduceLoad && i % 4 == 0)
+            if (MeteorReduceLoad && i % 2 == 0)
                 Thread.Sleep(1); // reduce CPU usage
 
             var star = _stars2[i];
@@ -1917,12 +1935,12 @@ public partial class Spinner : UserControl
                 Color currentColor;
                 if (lifeRatio > 0.5)
                 {
-                    double t = (lifeRatio - 0.5) / 0.5; // 1 → 0
+                    double t = (lifeRatio - 0.5) / 0.5; // 1 ⇨ 0
                     currentColor = LerpColor(star.MidColor, star.StartColor, t);
                 }
                 else
                 {
-                    double t = lifeRatio / 0.5; // 1 → 0
+                    double t = lifeRatio / 0.5; // 1 ⇨ 0
                     currentColor = LerpColor(star.EndColor, star.MidColor, t);
                 }
                 //dot.Fill = new SolidColorBrush(currentColor);
@@ -1930,8 +1948,7 @@ public partial class Spinner : UserControl
                 {
                     GradientOrigin = new Point(0.5, 0.5), // center
                     Center = new Point(0.5, 0.5),
-                    RadiusX = 0.5,
-                    RadiusY = 0.5,
+                    RadiusX = 0.5, RadiusY = 0.5,
                     GradientStops = new GradientStopCollection
                     {
                         new GradientStop(LerpColor(currentColor, Colors.White, 0.5), 0.0), // bright core
@@ -2005,7 +2022,8 @@ public partial class Spinner : UserControl
                         // Preferred direction (in radians)
                         //double radiant = Math.PI / 4; // Example: right = 45°
                         double radiant = Math.PI / 2; // Example: downward = 90°
-                        double spread = Math.PI / 6; // Spread around radiant (e.g. ±30° around the downward angle)
+                        //double spread = Math.PI / 6; // Spread around radiant (e.g. ±30° around the downward angle)
+                        double spread= SpreadFromDegrees(MeteorSpreadAngle); // convert degrees to radians
                         angle = radiant + (Random.Shared.NextDouble() * 2 - 1) * spread; // Pick a random angle within that cone
                     }
 
@@ -2042,6 +2060,26 @@ public partial class Spinner : UserControl
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Converts a spread angle in degrees into a radian value of the form Math.PI / N.
+    /// For example: 30° ⇨ Math.PI / 6.
+    /// </summary>
+    /// <remarks>range is 0 to 180 (straight up to straight down)</remarks>
+    static double SpreadFromDegrees(double degrees)
+    {
+        if (degrees <= 0 || degrees >= 180)
+            degrees = 90; // default to 90° if out of range
+
+        // Convert degrees to radians
+        double radians = degrees * Math.PI / 180.0;
+
+        // Equivalent divisor (Math.PI / N)
+        double divisor = Math.PI / radians;
+
+        // Return just the radians
+        return radians;
     }
 
     /// <summary>
@@ -2145,7 +2183,7 @@ public partial class Spinner : UserControl
     /// </summary>
     static Color BrightenGamma(Color color, double factor = 1.5, double gamma = 2.2)
     {
-        // Convert sRGB → linear
+        // Convert sRGB ⇨ linear
         double r = Math.Pow(color.R / 255.0, gamma);
         double g = Math.Pow(color.G / 255.0, gamma);
         double b = Math.Pow(color.B / 255.0, gamma);
@@ -2155,7 +2193,7 @@ public partial class Spinner : UserControl
         g = Math.Min(1.0, g * factor);
         b = Math.Min(1.0, b * factor);
 
-        // Convert back linear → sRGB
+        // Convert back linear ⇨ sRGB
         byte R = (byte)(Math.Pow(r, 1.0 / gamma) * 255);
         byte G = (byte)(Math.Pow(g, 1.0 / gamma) * 255);
         byte B = (byte)(Math.Pow(b, 1.0 / gamma) * 255);
@@ -2175,7 +2213,7 @@ public partial class Spinner : UserControl
         if (factor > 1.0) factor = 1.0;
         if (factor < 0.0) factor = 0.0;
 
-        // Convert sRGB → linear
+        // Convert sRGB ⇨ linear
         double r = Math.Pow(color.R / 255.0, gamma);
         double g = Math.Pow(color.G / 255.0, gamma);
         double b = Math.Pow(color.B / 255.0, gamma);
@@ -2185,7 +2223,7 @@ public partial class Spinner : UserControl
         g *= factor;
         b *= factor;
 
-        // Convert back linear → sRGB
+        // Convert back linear ⇨ sRGB
         byte R = (byte)(Math.Pow(r, 1.0 / gamma) * 255);
         byte G = (byte)(Math.Pow(g, 1.0 / gamma) * 255);
         byte B = (byte)(Math.Pow(b, 1.0 / gamma) * 255);
@@ -2258,7 +2296,7 @@ public partial class Spinner : UserControl
         if (totalCount <= 1) 
             return 1d;
 
-        // Linear fade: 1.0 at index 0 → 0.1 at the last dot
+        // Linear fade: 1.0 at index 0 ⇨ 0.1 at the last dot
         double t = (double)index / (totalCount - 1);
         double opacity = 1.0 - 0.9 * t;
 
@@ -2270,7 +2308,7 @@ public partial class Spinner : UserControl
         if (totalCount <= 1)
             return 1d;
 
-        // Linear fade: 1.0 at index 0 → 0.1 at the last dot
+        // Linear fade: 1.0 at index 0 ⇨ 0.1 at the last dot
         double t = (double)index / (totalCount - 1);
         double opacity = 1.0 - t * t;
 
