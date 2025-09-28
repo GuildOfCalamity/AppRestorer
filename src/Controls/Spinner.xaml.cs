@@ -1946,14 +1946,14 @@ public partial class Spinner : UserControl
                 //dot.Fill = new SolidColorBrush(currentColor);
                 dot.Fill = new RadialGradientBrush
                 {
-                    GradientOrigin = new Point(0.5, 0.5), // center
+                    GradientOrigin = new Point(0.75, 0.25), // center
                     Center = new Point(0.5, 0.5),
                     RadiusX = 0.5, RadiusY = 0.5,
                     GradientStops = new GradientStopCollection
                     {
-                        new GradientStop(LerpColor(currentColor, Colors.White, 0.5), 0.0), // bright core
-                        new GradientStop(currentColor, 0.6),
-                        new GradientStop(LerpColor(currentColor, Colors.Black, 0.5), 0.8), // dark outer
+                        new GradientStop(LerpColor(currentColor, Colors.White, 0.75), 0.0), // bright core
+                        new GradientStop(currentColor, 0.7),
+                        new GradientStop(LerpColor(currentColor, Colors.Black, 0.3), 0.92), // dark outer
                         new GradientStop(Color.FromArgb(90, currentColor.R, currentColor.G, currentColor.B), 1.0) // transparent edge
                     }
                 };
@@ -2063,8 +2063,11 @@ public partial class Spinner : UserControl
     }
 
     /// <summary>
-    /// Converts a spread angle in degrees into a radian value of the form Math.PI / N.
-    /// For example: 30° ⇨ Math.PI / 6.
+    /// Converts a spread angle in degrees into a radian value of the form Math.PI/N.<br/>
+    /// For example: 30° ⇨ Math.PI / 6.<br/>
+    /// - SpreadFromDegrees(30) ⇨ 0.523 ⇨ Math.PI/6<br/>
+    /// - SpreadFromDegrees(45) ⇨ 0.785 ⇨ Math.PI/4<br/>
+    /// - SpreadFromDegrees(60) ⇨ 1.047 ⇨ Math.PI/3<br/>
     /// </summary>
     /// <remarks>range is 0 to 180 (straight up to straight down)</remarks>
     static double SpreadFromDegrees(double degrees)
@@ -2080,6 +2083,28 @@ public partial class Spinner : UserControl
 
         // Return just the radians
         return radians;
+    }
+
+    /// <summary>
+    /// Converts a spread angle in degrees into radians and also<br/>
+    /// returns the divisor N such that spread ≈ Math.PI/N.<br/>
+    /// - SpreadFromDegreesToRadians(30) ⇨ (0.523, 6) ⇨ Math.PI/6<br/>
+    /// - SpreadFromDegreesToRadians(45) ⇨ (0.785, 4) ⇨ Math.PI/4<br/>
+    /// - SpreadFromDegreesToRadians(60) ⇨ (1.047, 3) ⇨ Math.PI/3<br/>
+    /// </summary>
+    static (double Radians, double Divisor) SpreadFromDegreesToRadians(double degrees)
+    {
+        if (degrees <= 0 || degrees >= 180)
+            degrees = 90; // default to 90° if out of range
+
+        // Convert degrees to radians
+        double radians = degrees * Math.PI / 180.0;
+
+        // Equivalent divisor (Math.PI / N)
+        double divisor = Math.PI / radians;
+
+        // Return radians and divisor
+        return (radians, divisor);
     }
 
     /// <summary>
