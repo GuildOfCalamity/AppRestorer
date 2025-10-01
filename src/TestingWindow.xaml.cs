@@ -19,7 +19,11 @@ public partial class TestingWindow : Window
     public TestingWindow()
     {
         InitializeComponent();
-        this.Loaded += (s, e) => this.WindowState = WindowState.Maximized;
+        this.Loaded += (s, e) =>
+        {
+            //this.WindowState = WindowState.Maximized;
+            //this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        };
     }
 
     void Window_KeyUp(object sender, KeyEventArgs e)
