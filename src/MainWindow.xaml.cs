@@ -588,7 +588,7 @@ public partial class MainWindow : Window
                 _vm!.IsAnimated = false;
                 var test = new TestingWindow();
                 test.Owner = this;
-                test.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                //test.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                 this.Effect = new System.Windows.Media.Effects.BlurEffect()
                 {
                     KernelType = System.Windows.Media.Effects.KernelType.Gaussian,

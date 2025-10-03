@@ -43,6 +43,12 @@ public partial class SettingsWindow : Window
         else
             Debug.WriteLine("[INFO] XAML system is not in design mode.");
 
+        this.KeyUp += (s, e) =>
+        {
+            if (e.Key == Key.Escape)
+                this.Close();
+        };
+
         #region [Menu Items]
         // Example items to show on candy button event
         _menu = new AnimatedContextMenu(shadowColor: Colors.Navy);
